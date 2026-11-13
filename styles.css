@@ -345,7 +345,15 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .seat-tot { font-size: 24px; font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .seat-cards { display: grid; grid-template-columns: repeat(var(--cols, 7), 1fr); gap: 6px; }
 .seat-cards .card.new, .seat-extras .card.new { animation: dropin .28s ease-out; }
-.seat-cards .card.extra { transform: scale(.88); }
 .slot { aspect-ratio: 5 / 7; border-radius: 10%/7.2%; background: rgba(15, 42, 68, .04); box-shadow: inset 0 0 0 1px rgba(15, 42, 68, .05); }
-.seat-extras { display: flex; gap: 5px; margin-top: 7px; }
-.seat-extras .card { width: 32px; }
+
+/* Bonus/action cards: their own row along the bottom of each hand, fixed size, room for all 7. */
+.seat-extras { display: flex; gap: 6px; margin-top: 8px; min-height: calc(var(--xw) * 1.4); }
+.seat-extras .card { width: var(--xw); }
+#seats { --xw: 32px; }
+#seats.two { --xw: 40px; }
+
+/* Hands share the table's full height; the bonus/action row sits at the bottom of each. */
+#table.seatmode #seats { flex: 1; }
+#seats .seat { flex: 1 1 0; min-height: min-content; display: flex; flex-direction: column; }
+#seats .seat-extras { margin-top: auto; padding-top: 8px; }

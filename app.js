@@ -324,9 +324,11 @@
   const bustCardHTML = (p, newId) => cardHTML(p.bust, p.bust.id === newId ? 'new' : '').replace(/<\/div>$/, '<div class="xmark">✕</div></div>');
 
   function renderSeats(s, focus, turnP, newId) {
-    // 2 players: bigger cards, 5 per row, bonus cards fill the spare spots in row 2.
-    // 3 players: all 7 number slots in one row, bonus cards in a small row below.
+    // Number cards on top, bonus/action cards in their own row along the bottom, both at a
+    // fixed size (all 7 possible extras fit in that row). 2 players: each hand fills half the
+    // screen with 5 slots per row. 3 players: all 7 slots in one row.
     const two = s.players.length <= 2;
+    $('#seats').classList.toggle('two', two);
     $('#seats').style.setProperty('--cols', two ? 5 : 7);
     $('#seats').innerHTML = s.players.map((p, i) => {
       const b = breakdown(p);
@@ -340,8 +342,7 @@
       for (let k = used; k < 7; k++) row += '<div class="slot"></div>';
       const extras = p.cards.filter((c) => c.kind !== 'num');
       if (p.second) extras.push(p.second);
-      const extrasHTML = extras.map((c) => cardHTML(c, (c.id === newId ? 'new ' : '') + 'extra')).join('');
-      if (two) row += extrasHTML;
+      const extrasHTML = extras.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
       const tag = i === turnP ? '<span class="tag-s turn">YOUR TURN</span>' : statusTag(p);
       return `<div class="${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">
         <div class="seat-head">
@@ -349,7 +350,7 @@
           <div class="seat-score"><span class="seat-rd">+${b.score} <small>this round</small></span><span class="seat-tot">${p.total}</span></div>
         </div>
         <div class="seat-cards">${row}</div>
-        ${extras.length && !two ? `<div class="seat-extras">${extrasHTML}</div>` : ''}
+        <div class="seat-extras">${extrasHTML}</div>
       </div>`;
     }).join('');
   }
