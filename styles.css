@@ -148,10 +148,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .card.mod { background: radial-gradient(circle at 50% 40%, #fff6c9, #ffd23f 60%, #f0a020); }
 .card.mod .big, .card.x2 .big { position: absolute; inset: 0 0 12% 0; display: grid; place-items: center; font-weight: 900; font-size: 40cqw; letter-spacing: -.03em; }
-.card.mod .big { color: #fff; text-shadow: 0 1.5cqw 0 #b55d00; -webkit-text-stroke: 1.2cqw #b55d00; paint-order: stroke fill; }
+.card.mod .big { color: #fff; text-shadow: 0 2cqw 0 #8a4300; -webkit-text-stroke: 3cqw #a65200; paint-order: stroke fill; }
 .card.mod .lbl { color: #8a4300; }
 .card.x2 { background: radial-gradient(circle at 50% 40%, #ffe7a0, #ffb800 45%, #e0541b); }
-.card.x2 .big { color: #fff; font-size: 46cqw; -webkit-text-stroke: 1.4cqw #7a1d00; paint-order: stroke fill; text-shadow: 0 1.5cqw 0 #7a1d00; }
+.card.x2 .big { color: #fff; font-size: 46cqw; -webkit-text-stroke: 3cqw #7a1d00; paint-order: stroke fill; text-shadow: 0 1.5cqw 0 #7a1d00; }
 .card.x2 .lbl { color: #fff; text-shadow: 0 1px 0 #7a1d00; }
 
 .card.freeze { background: radial-gradient(circle at 50% 35%, #f0fbff, #8ee0ff 55%, #2a9be0); }
