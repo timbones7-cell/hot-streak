@@ -398,9 +398,6 @@
         focusP = (ev.dealer + 1) % s.players.length;
         render(s, focusP);
         banner(`Round ${ev.round}`, `${s.players[ev.dealer].name} deals`, '#1677c9');
-        const deck = $('.deckstack');
-        deck.classList.add('shuffling');
-        setTimeout(() => deck.classList.remove('shuffling'), 950);
         await sleep(1100);
         break;
       }
@@ -651,9 +648,9 @@
     }
 
     const head = over
-      ? `<div class="winner"><div class="crown">👑</div><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
+      ? `<div class="winner"><small>Winner</small><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
       : `<h2>Round ${sum.round} results</h2><p>First to ${s.target} wins. ${newLead}</p>`;
-    const undoBtn = undo ? `<button class="btn ghost" id="mUndo">↩ Undo that close</button>` : '';
+    const undoBtn = undo ? `<button class="btn ghost" id="mUndo">Undo that close</button>` : '';
     const btns = over
       ? `<button class="btn primary big" id="mRematch">Rematch</button>${undoBtn}<button class="btn ghost" id="mNew">New players</button>`
       : `<button class="btn primary big" id="mNext">Next round · ${esc(nextDealer)} deals</button>${undoBtn}`;
@@ -714,9 +711,9 @@
   function showMenu() {
     heart.stop();
     openModal(`<h2>Menu</h2><div class="menu-list">
-      <button class="btn ghost" id="mRules">📖  How to play</button>
-      <button class="btn ghost" id="mHome">🏠  Main menu (game is saved)</button>
-      <button class="btn ghost" id="mEnd" style="color:#ff8a95">✖  End this game</button>
+      <button class="btn ghost" id="mRules">How to play</button>
+      <button class="btn ghost" id="mHome">Main menu (game is saved)</button>
+      <button class="btn ghost" id="mEnd" style="color:var(--bad)">End this game</button>
       <button class="btn primary" id="mBack">Back to the table</button></div>`, (m) => {
       m.querySelector('#mRules').onclick = showRules;
       m.querySelector('#mHome').onclick = () => { closeModal(); showSetup(); };
