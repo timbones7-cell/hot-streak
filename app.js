@@ -73,10 +73,10 @@
       }
       if (parts.length) requestAnimationFrame(loop); else { running = false; cx.clearRect(0, 0, innerWidth, innerHeight); }
     }
-    function burst(n = 160, y = 0.4) {
-      const cols = ['#ffd23f', '#ff6b1a', '#ff3d81', '#3ddcff', '#a3e635', '#c084fc', '#fff'];
+    // n pieces from (x, y) given as fractions of the screen; cols overrides the confetti palette.
+    function burst(n = 160, y = 0.4, cols = ['#ffd23f', '#ff6b1a', '#ff3d81', '#3ddcff', '#a3e635', '#c084fc', '#fff'], x = 0.5) {
       for (let i = 0; i < n; i++) {
-        parts.push({ x: innerWidth / 2 + (Math.random() - 0.5) * 60, y: innerHeight * y, vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 15 - 5, s: 6 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: cols[i % cols.length], life: 110 + Math.random() * 60, round: Math.random() < 0.3 });
+        parts.push({ x: innerWidth * x + (Math.random() - 0.5) * 60, y: innerHeight * y, vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 15 - 5, s: 6 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: cols[i % cols.length], life: 110 + Math.random() * 60, round: Math.random() < 0.3 });
       }
       if (!running) { running = true; requestAnimationFrame(loop); }
     }
@@ -276,6 +276,29 @@
   }
   function shakeReveal() { const el = $('#reveal'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 
+  // Bust: split the revealed card along a jagged crack; the halves tumble apart and fall.
+  // Returns the card's center (as screen fractions) for the debris burst, or null if nothing is shown.
+  function shatterReveal() {
+    const face = $('#reveal .flipper > .card:not(.back)');
+    if (!face) return null;
+    const a = $('#reveal .flipper').getBoundingClientRect();
+    const crack = '55% 0, 42% 28%, 60% 50%, 41% 74%, 52% 100%';
+    const halves = [
+      { clip: `polygon(0 0, ${crack}, 0 100%)`, to: 'translate(-70px, 160px) rotate(-28deg)' },
+      { clip: `polygon(${crack}, 100% 100%, 100% 0)`, to: 'translate(70px, 190px) rotate(32deg)' },
+    ];
+    halves.forEach((h) => {
+      const el = face.cloneNode(true);
+      el.classList.add('shard');
+      Object.assign(el.style, { left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', clipPath: h.clip, webkitClipPath: h.clip });
+      document.body.appendChild(el);
+      el.animate([{ transform: 'none', opacity: 1 }, { transform: h.to, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.45, 0, .8, .6)', fill: 'forwards' });
+      setTimeout(() => el.remove(), 700);
+    });
+    hideReveal(false);
+    return { x: (a.left + a.width / 2) / innerWidth, y: (a.top + a.height / 2) / innerHeight };
+  }
+
   // ---------------- rendering ----------------
   function statusTag(p) {
     if (p.status === 'busted') return '<span class="tag-s bust">BUST</span>';
@@ -336,19 +359,19 @@
   // that gives the biggest number cards while leaving room for a full bonus/action row of 7.
   // Sizes depend only on the screen, so cards never change size during a round.
   function layoutSeats() {
-    // Size for the tightest hand: a header that wraps to two lines (narrow phones) leaves less room.
+    // Size for the tightest hand so every hand fits.
     const bodies = [...document.querySelectorAll('#seats .seat-body')];
     if (!bodies.length) return;
     const W = Math.min(...bodies.map((b) => b.clientWidth));
     const H = Math.min(...bodies.map((b) => b.clientHeight));
-    const g = 6, rowGap = 8;
+    const g = 6, rowGap = 6;
     let best = null;
     for (const cols of [2, 3, 4, 5, 7]) {
       const rows = Math.ceil(7 / cols);
       const byWidth = (W - (cols - 1) * g) / cols;
-      // Bonus/action cards are ~62% of a number card, and all 7 must fit across.
-      const byHeight = (H - rowGap - (rows - 1) * g) / (1.4 * (rows + 0.62));
-      const cw = Math.floor(Math.min(byWidth, byHeight, 96));
+      // Reserve a bonus/action row at least ~55% of a number card's size; all 7 must fit across.
+      const byHeight = (H - rowGap - (rows - 1) * g) / (1.4 * (rows + 0.55));
+      const cw = Math.floor(Math.min(byWidth, byHeight, 110));
       if (!best || cw > best.cw) best = { cols, cw, rows };
     }
     // Bonus/action cards then take whatever height is left, as long as all 7 still fit across.
@@ -434,14 +457,19 @@
         if (ev.card.kind === 'second') toast(`${nm(ev.p)} is holding a Second Chance`);
         await sleep(ev.card.kind === 'num' ? 300 : 500);
         break;
-      case 'bust':
+      case 'bust': {
+        // The duplicate shakes, then cracks in half and falls apart; the hand jolts red under a BUST slam.
         shakeReveal(); flash('red'); shake();
-        stamp('BUST!', 'bust', `Second ${ev.card.value}`, ev.p);
-        await sleep(550);
-        hideReveal(true);
+        await sleep(330);
+        const at = shatterReveal();
+        if (at) fx.burst(60, at.y, ['#e5384b', '#ff7a85', '#8a0f1f', '#c9d3dc'], at.x);
         render(s, ev.p, ev.card.id);
-        await sleep(1000);
+        const seat = $(`#seats .seat[data-i="${ev.p}"]`);
+        if (seat) seat.classList.add('busting');
+        stamp('BUST!', 'bust', `Second ${ev.card.value}`, ev.p);
+        await sleep(1150);
         break;
+      }
       case 'saved':
         stamp('SAVED!', 'saved', 'Second Chance used', ev.p);
         toast(`A Second Chance saved ${nm(ev.p)}`);
@@ -580,30 +608,35 @@
   }
 
   // ---------------- modals ----------------
-  function openModal(html, onBind) {
+  // cls: extra classes for the sheet (the action picker uses a full-screen style).
+  function openModal(html, onBind, cls = '') {
+    $('#modal').className = cls;
     $('#modal').innerHTML = html;
     $('#modalWrap').classList.remove('hidden');
     $('#modal').scrollTop = 0;
     if (onBind) onBind($('#modal'));
   }
-  function closeModal() { $('#modalWrap').classList.add('hidden'); $('#modal').innerHTML = ''; }
+  function closeModal() { $('#modalWrap').classList.add('hidden'); $('#modal').innerHTML = ''; $('#modal').className = ''; }
 
+  // Full-screen action picker: the card floats at the top, players fill the rest as big buttons.
   function showTarget(a) {
     const s = game.s;
     const from = s.players[a.p];
-    const desc = {
-      freeze: 'They bank their points right now and are out for the round.',
-      flip3: 'They must flip the next 3 cards, one at a time.',
-      second: 'You can only hold one. Pick who gets this one.',
+    const copy = {
+      freeze: ['Freeze!', 'Who gets frozen? They bank their points and sit out the rest of the round.'],
+      flip3: ['Flip Three!', 'Who has to flip the next 3 cards, one at a time?'],
+      second: ['Spare Second Chance', 'You can only hold one. Who gets this one?'],
     }[a.action];
-    const title = a.action === 'second' ? 'Give away a Second Chance' : `Play ${ACTION_NAME[a.action]}`;
-    const opts = a.options.map((i) => {
+    const opts = a.options.map((i, k) => {
       const p = s.players[i]; const b = breakdown(p);
       const n = p.cards.filter((c) => c.kind === 'num').length;
-      return `<button data-i="${i}" style="--pc:${pc(i)}"><div><div class="pn">${esc(p.name)}${i === a.p ? '<span class="you">YOU</span>' : ''}</div>
-        <div class="pm">${n}/7 numbers${p.second ? ' · has 2nd Chance' : ''} · total ${p.total}</div></div><div class="pr">${b.score}</div></button>`;
+      return `<button data-i="${i}" style="--pc:${pc(i)}; animation-delay:${0.12 + k * 0.06}s">
+        <div class="pk-who"><div class="pn"><span class="pn-t">${esc(p.name)}</span>${i === a.p ? '<span class="you">YOU</span>' : ''}</div>
+        <div class="pm">${n}/7 numbers${p.second ? ' · has 2nd Chance' : ''} · total ${p.total}</div></div>
+        <div class="pr">${b.score}<small>this round</small></div></button>`;
     }).join('');
-    openModal(`<div class="mhead">${cardHTML(a.card)}<div><h2>${title}</h2><p><b style="color:${pc(a.p)}">${esc(from.name)}</b> drew it. ${desc}</p></div></div>
+    openModal(`<div class="pk-hero"><div class="pk-card">${cardHTML(a.card)}</div>
+      <h2>${copy[0]}</h2><p><b style="color:${pc(a.p)}">${esc(from.name)}</b> drew it. ${copy[1]}</p></div>
       <div class="pick">${opts}</div>`, (m) => {
       m.querySelectorAll('.pick button').forEach((b) => b.addEventListener('click', () => {
         clearUndo();
@@ -611,7 +644,7 @@
         game.chooseTarget(+b.dataset.i);
         pump();
       }));
-    });
+    }, `picker ${a.action}`);
   }
 
   function showSummary() {
@@ -661,7 +694,7 @@
     const undoBtn = undo ? `<button class="btn ghost" id="mUndo">Undo that close</button>` : '';
     const btns = over
       ? `<button class="btn primary big" id="mRematch">Rematch</button>${undoBtn}<button class="btn ghost" id="mNew">New players</button>`
-      : `<button class="btn primary big" id="mNext">Next round · ${esc(nextDealer)} deals</button>${undoBtn}`;
+      : `<button class="btn primary big" id="mNext">Next round<small>${esc(nextDealer)} deals</small></button>${undoBtn}`;
     openModal(`${head}${momentHTML}<div class="sumrows">${rowsHTML}</div>${achHTML}<div class="mbtns">${btns}</div>`, (m) => {
       const ub = m.querySelector('#mUndo');
       if (ub) ub.addEventListener('click', doUndo);
@@ -674,7 +707,7 @@
       if (rm) rm.addEventListener('click', () => { clearUndo(); closeModal(); startGame(s.players.map((p) => p.name), s.target); });
       const nw = m.querySelector('#mNew');
       if (nw) nw.addEventListener('click', () => { clearUndo(); closeModal(); store.del(SAVE); game = null; showSetup(); });
-    });
+    }, 'results');
   }
 
   function countUp(els) {
@@ -693,8 +726,8 @@
     <p>Score the most points by flipping cards without getting a duplicate number. First to the target score (200 by default) at the end of a round wins.</p>
     <h3>Your turn</h3><ul>
       <li><b>FLIP</b>: take the next card. Hold the deck down and let go to flip. Slide your finger off before letting go to back out.</li>
-      <li><b>CLOSE</b>: bank your round points. You're out for the rest of the round, and action cards can't touch you anymore. Tapped it by mistake? Hit <b>Undo</b> within 5 seconds.</li>
-      <li><b>SKIP</b> (house rule): pass your turn without flipping. You keep your cards and stay in the round. Each player gets one skip per round, and you can't skip if you're the only one left.</li></ul>
+      <li><b>CLOSE</b>: bank your round points. You're out for the rest of the round, and action cards can't touch you anymore.</li>
+      <li><b>SKIP</b>: pass your turn once per round (see House rules).</li></ul>
     <h3>Busting</h3><ul><li>Flip a number you already have and you <b>bust</b>: 0 points this round.</li></ul>
     <h3>7 Streak</h3><ul><li>Collect <b>7 different numbers</b>. The round ends right away for everyone and you get <b>+15</b>.</li></ul>
     <h3>The deck (94 cards)</h3>
@@ -709,7 +742,11 @@
       <li><b>Flip Three</b>: pick an active player. They must flip 3 cards in a row. Actions flipped during it wait until the 3 are done.</li>
       <li><b>Second Chance</b>: keep it. If you flip a duplicate, both cards are discarded and you stay in. You can only hold one, so an extra one goes to another player.</li>
       <li>If you're the <b>only active player</b>, you have to take Freeze or Flip Three yourself.</li></ul>
-    <h3>Rounds</h3><ul><li>The dealer gives everyone one card, then players take turns. The round ends when everyone has closed or busted, or someone hits a 7 Streak. The deal moves left each round.</li></ul>
+    <h3>Rounds</h3><ul><li>The <b>Dealer</b> gives everyone one card, then players take turns starting after the dealer. The round ends when everyone has closed or busted, or someone hits a 7 Streak. The deal moves to the next player each round.</li>
+      <li>The game ends after the round in which someone reaches the target score (200 by default). Highest total wins; a tie keeps playing.</li></ul>
+    <h3>House rules</h3><ul>
+      <li><b>Skip</b>: once per round, pass your turn without flipping. You keep your cards and stay in the round, so action cards can still hit you. You can't skip if you're the only player left.</li>
+      <li><b>Close</b> is what the original game calls "stay." Tapped it by mistake? Hit <b>Undo</b> within 5 seconds.</li></ul>
   </div><div class="mbtns" style="margin-top:16px"><button class="btn primary" id="mOk">Got it</button></div>`;
 
   function showRules() {
@@ -746,7 +783,16 @@
     clearUndo();
     setHeat(0, false);
     const saved = store.get(SAVE);
-    $('#btnResume').classList.toggle('hidden', !(saved && saved.phase !== 'over' && saved.players));
+    const canResume = !!(saved && saved.phase !== 'over' && saved.players);
+    const resume = $('#btnResume');
+    resume.classList.toggle('hidden', !canResume);
+    if (canResume) {
+      const who = saved.players.map((p, i) => `<b style="color:${pc(i)}">${esc(p.name)}</b>`).join(' · ');
+      const lead = saved.players.map((p) => p.total).join(' – ');
+      resume.innerHTML = `<span class="rs-txt"><span class="rs-title">Continue your game</span>
+        <span class="rs-sub">Round ${saved.round} · ${lead} · to ${saved.target}</span><span class="rs-who">${who}</span></span>
+        <span class="rs-go" aria-hidden="true">▶</span>`;
+    }
     renderNames();
   }
 

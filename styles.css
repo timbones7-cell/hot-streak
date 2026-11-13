@@ -318,7 +318,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .seat-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .seat-name { flex: 1 1 0; display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 26px; font-weight: 700; font-size: 16px; color: var(--pc); }
 .seat-name .nm { flex: 0 1 auto; min-width: 2.5em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.seat-name .dealer { flex: none; width: 17px; height: 17px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 9px; font-weight: 700; display: grid; place-items: center; }
 .seat-name .tag-s { flex: none; }
 .seat-score { display: flex; align-items: center; gap: 8px; flex: none; }
 .seat-rd { font-size: 13px; font-weight: 600; color: var(--goldInk); font-variant-numeric: tabular-nums; }
@@ -375,4 +374,121 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   #targetLbl, .topbar .dot { display: none; }
   .seat-name { font-size: 15px; }
   .seat-tot { font-size: 18px; padding: 2px 8px; }
+}
+
+/* ---------- full-screen action picker (Freeze / Flip Three / spare Second Chance) ---------- */
+#modal.picker { max-width: none; height: 100%; max-height: 100%; border-radius: 0; display: flex; flex-direction: column; gap: 14px;
+  padding: calc(var(--safe-t) + 22px) 18px calc(var(--safe-b) + 18px); box-shadow: none; animation: fade .2s ease-out; }
+#modal.picker.freeze { background: radial-gradient(120% 60% at 50% 0%, #a9e3fb, #e6f7fe 55%, #fff); }
+#modal.picker.flip3 { background: radial-gradient(120% 60% at 50% 0%, #ffe970, #fff8cf 55%, #fff); }
+#modal.picker.second { background: radial-gradient(120% 60% at 50% 0%, #ffb0aa, #ffecea 55%, #fff); }
+.pk-hero { flex: none; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.pk-card { width: min(30vw, 22vh, 150px); perspective: 800px; margin-bottom: 6px; filter: drop-shadow(0 16px 26px rgba(15, 42, 68, .28)); }
+.pk-card .card { width: 100%; animation: pkcard .7s cubic-bezier(.2, 1.25, .35, 1) both, pkfloat 3.2s ease-in-out .8s infinite; }
+@keyframes pkcard { from { transform: rotateY(180deg) rotate(-18deg) scale(.4); opacity: 0; } }
+@keyframes pkfloat { 50% { transform: translateY(-7px) rotate(-2deg); } }
+#modal.picker h2 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+#modal.picker.freeze h2 { color: #0d5f97; }
+#modal.picker.flip3 h2 { color: #8a6a00; }
+#modal.picker.second h2 { color: #b3261e; }
+#modal.picker p { margin: 0; max-width: 34ch; font-size: 15px; }
+#modal.picker .pick { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+#modal.picker .pick button { flex: 1 1 0; min-height: 66px; max-height: 128px; padding: 12px 18px 12px 26px; border-radius: 18px; background: #fff;
+  border: 1.5px solid var(--line); box-shadow: var(--shadow); animation: pkbtn .4s cubic-bezier(.2, .9, .3, 1) both; }
+#modal.picker .pick button::before { left: 11px; width: 5px; height: 60%; }
+#modal.picker .pick button:active { transform: scale(.97); border-color: var(--pc); background: color-mix(in srgb, var(--pc) 8%, #fff); }
+@keyframes pkbtn { from { transform: translateY(18px); opacity: 0; } }
+.pk-who { min-width: 0; flex: 1 1 auto; }
+#modal.picker .pn { display: flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 700; color: var(--pc); min-width: 0; }
+.pn-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#modal.picker .pm { font-size: 13px; }
+#modal.picker .pr { flex: none; text-align: right; font-size: 30px; font-weight: 800; line-height: 1; }
+#modal.picker .pr small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+
+/* ---------- bust: card cracks in half, hand jolts red, BUST slams down ---------- */
+.shard { position: fixed !important; inset: auto !important; z-index: 46; margin: 0; pointer-events: none; box-shadow: 0 10px 24px rgba(15, 42, 68, .3) !important; }
+#stamp.bust { font-size: 30px; padding: 14px 34px; letter-spacing: .1em; box-shadow: 0 0 0 6px rgba(229, 56, 75, .22), 0 18px 40px rgba(229, 56, 75, .45); }
+#stamp.bust.show { animation: slam 1.3s cubic-bezier(.2, .8, .3, 1) forwards; }
+@keyframes slam {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.3) rotate(-10deg); }
+  13% { opacity: 1; transform: translate(-50%, -50%) scale(.9) rotate(-4deg); }
+  21% { transform: translate(-50%, -50%) scale(1.06) rotate(-4deg); }
+  29%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.96) rotate(-4deg); }
+}
+.seat.busting { animation: seatjolt .4s ease-out, seatred .9s ease-out; }
+@keyframes seatjolt { 15%, 55% { transform: translateX(-6px); } 35%, 75% { transform: translateX(6px); } }
+@keyframes seatred { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 75, .7); background: #ffe3e6; } 40% { box-shadow: 0 0 0 8px rgba(229, 56, 75, .25); background: #ffecee; } 100% { box-shadow: var(--shadow); } }
+.seat.busting .seat-cards .card { animation: cardslump .5s ease-out; }
+@keyframes cardslump { 30% { transform: translateY(-5px) rotate(-4deg); } 100% { transform: none; } }
+
+/* ---------- round results: tall sheet, big rows, big Next round button ---------- */
+#modal.results { min-height: 84%; display: flex; flex-direction: column; padding: 26px 20px calc(var(--safe-b) + 20px); }
+#modal.results h2 { font-size: 28px; }
+#modal.results .moment { padding: 14px 16px; font-size: 16px; }
+#modal.results .sumrows { flex: 1 1 auto; gap: 12px; margin: 14px 0 18px; }
+#modal.results .sumrow { padding: 16px 18px 16px 26px; border-radius: 16px; }
+#modal.results .sumrow::before { left: 11px; width: 5px; top: 16px; bottom: 16px; }
+#modal.results .sumrow .sn { font-size: 20px; }
+#modal.results .sumrow .sb { font-size: 14px; }
+#modal.results .sumrow .st { font-size: 38px; }
+#modal.results .sumrow .bar { height: 6px; margin-top: 10px; }
+#modal.results .mbtns { margin-top: auto; gap: 12px; }
+#modal.results #mNext, #modal.results #mRematch { min-height: 66px; font-size: 20px; font-weight: 700; border-radius: 18px; }
+#modal.results #mNew, #modal.results #mUndo { min-height: 52px; font-size: 17px; }
+
+/* ---------- controls: bigger Skip / Close (Flip stays the biggest) ---------- */
+#controls > button { height: 54px; font-size: 18px; }
+.deckbtn { height: 70px !important; font-size: 24px !important; }
+.skipbtn small { font-size: 12px; }
+@media (max-height: 700px) {
+  #controls > button { height: 48px; }
+  .deckbtn { height: 62px !important; }
+}
+
+/* ---------- tighter chrome around the hands so the cards get the space ---------- */
+#table.railmode #seats, #seats { gap: 8px; }
+.seat { padding: 10px 11px 11px 15px; gap: 6px; }
+.seat-body { gap: 6px; }
+#controls { padding-top: 8px; }
+
+/* ---------- continue saved game: a big card at the top of setup ---------- */
+.resume { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 16px 16px 20px; border-radius: 18px; text-align: left; color: #fff;
+  background: linear-gradient(135deg, #2b8fe0, #1667b8); box-shadow: 0 2px 4px rgba(22, 103, 184, .3), 0 12px 28px rgba(22, 119, 201, .32);
+  animation: dropin .35s ease-out; transition: transform .1s; }
+.resume:active { transform: scale(.98); }
+.rs-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rs-title { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.rs-sub { font-size: 13px; font-weight: 600; opacity: .9; }
+.rs-who { display: block; margin-top: 4px; padding: 4px 10px; align-self: flex-start; max-width: 100%; border-radius: 999px; background: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-go { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #1667b8; font-size: 18px; padding-left: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15); animation: rsPulse 2s ease-in-out infinite; }
+@keyframes rsPulse { 50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(255, 255, 255, .25); } }
+#modal.results #mNext { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+#modal.results #mNext small { display: block; max-width: 100%; font-size: 13px; font-weight: 500; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Short phones (iPhone SE height): compact the results rows and the setup logo so nothing scrolls. */
+@media (max-height: 740px) {
+  #modal.results { padding-top: 20px; }
+  #modal.results h2 { font-size: 24px; }
+  #modal.results .moment { padding: 10px 14px; font-size: 15px; }
+  #modal.results .sumrows { gap: 8px; margin: 10px 0 12px; }
+  #modal.results .sumrow { padding: 11px 16px 11px 24px; }
+  #modal.results .sumrow .sn { font-size: 18px; }
+  #modal.results .sumrow .st { font-size: 32px; }
+  #modal.results .sumrow .bar { margin-top: 7px; }
+  #modal.results #mNext, #modal.results #mRematch { min-height: 60px; }
+  .fan { height: 78px; width: 150px; }
+  .fan .card { width: 50px; left: 50px; top: 4px; }
+  .fan-a { transform: rotate(-12deg) translateX(-36px); }
+  .fan-c { transform: rotate(12deg) translateX(36px); }
+  .logo h1 { margin-top: 10px; font-size: 36px; }
+  #setup { gap: 12px; }
+}
+/* Short phones: trim the Continue card and How-to-play link so setup fits without scrolling. */
+@media (max-height: 740px) {
+  .resume { padding: 12px 14px 12px 18px; }
+  .rs-who { margin-top: 2px; }
+  .rs-go { width: 40px; height: 40px; }
+  #btnRules { padding: 6px; }
 }
