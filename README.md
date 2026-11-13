@@ -2,6 +2,8 @@
 
 A pass-and-play, push-your-luck card game for one phone. It works offline once installed.
 
+**Play:** https://timbones7-cell.github.io/hot-streak/
+
 ## Put it on your iPhone
 
 1. The site is hosted on GitHub Pages (see below).
