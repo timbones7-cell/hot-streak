@@ -953,6 +953,24 @@
     };
   }
 
+  // Setup screen: a fanned hand showing off the deck — Freeze, +8, a big 7, Flip Three, 12.
+  (function buildFan() {
+    const hand = [
+      [{ kind: 'freeze' }, -20, -98, 0.3, 1], [{ kind: 'mod', value: 8 }, -10, -52, 0.18, 3], [{ kind: 'num', value: 7 }, 0, 0, 0.05, 5],
+      [{ kind: 'flip3' }, 10, 52, 0.18, 3], [{ kind: 'num', value: 12 }, 20, 98, 0.3, 1],
+    ];
+    const fan = $('.fan');
+    fan.innerHTML = hand.map(([c]) => cardHTML(c)).join('');
+    [...fan.children].forEach((el, k) => {
+      const [, r, x, d, z] = hand[k];
+      Object.assign(el.style, { zIndex: z });
+      el.style.setProperty('--r', r + 'deg');
+      el.style.setProperty('--x', x + 'px');
+      el.style.setProperty('--d', d + 's');
+      if (r === 0) { el.classList.add('hero'); el.insertAdjacentHTML('beforeend', '<span class="shine"></span>'); }
+    });
+  })();
+
   showSetup();
   if (!debug) showSplash();
 })();

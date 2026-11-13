@@ -66,11 +66,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .logo h1 { margin: 16px 0 0; font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--ink); }
 .logo h1 span { color: var(--hot); }
 .tag { margin: 8px 0 0; color: var(--ink2); font-weight: 500; font-size: 15px; }
-.fan { position: relative; height: 112px; width: 200px; margin: 0 auto; }
-.fan .card { position: absolute; width: 70px; left: 65px; top: 8px; box-shadow: var(--shadow-lg); }
-.fan-a { transform: rotate(-12deg) translateX(-48px); }
-.fan-b { transform: translateY(-4px); }
-.fan-c { transform: rotate(12deg) translateX(48px); }
 
 .panel { background: var(--panel); border-radius: var(--r-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
 .row { display: flex; align-items: center; gap: 10px; }
@@ -480,10 +475,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   #modal.results .sumrow .st { font-size: 32px; }
   #modal.results .sumrow .bar { margin-top: 7px; }
   #modal.results #mNext, #modal.results #mRematch { min-height: 60px; }
-  .fan { height: 78px; width: 150px; }
-  .fan .card { width: 50px; left: 50px; top: 4px; }
-  .fan-a { transform: rotate(-12deg) translateX(-36px); }
-  .fan-c { transform: rotate(12deg) translateX(36px); }
   .logo h1 { margin-top: 10px; font-size: 36px; }
   #setup { gap: 12px; }
 }
@@ -518,4 +509,24 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
   15% { opacity: var(--o); }
   100% { transform: translate(var(--drift), -110vh) rotate(var(--rot)); opacity: 0; }
+}
+
+/* ---------- setup: a fanned hand of five cards above the title ---------- */
+.fan { --cw: 62px; --hw: 74px; --spread: 1; position: relative; height: 122px; width: 270px; margin: 0 auto; }
+.fan::before { content: ""; position: absolute; left: 12%; right: 12%; top: 18%; bottom: -14%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 150, 90, .38), rgba(255, 120, 150, .18) 55%, transparent); filter: blur(6px); animation: fanGlow 4s ease-in-out infinite; }
+@keyframes fanGlow { 50% { opacity: .65; transform: scale(1.06); } }
+.fan .card { position: absolute; left: 50%; bottom: 4px; width: var(--cw); margin-left: calc(var(--cw) / -2); transform-origin: 50% 140%;
+  transform: translateX(calc(var(--x) * var(--spread))) rotate(var(--r)); box-shadow: 0 0 0 1px rgba(15, 42, 68, .06), 0 10px 22px rgba(15, 42, 68, .18);
+  animation: fanIn .9s cubic-bezier(.2, .9, .3, 1.08) var(--d) both, fanSway 5s ease-in-out calc(var(--d) + 1s) infinite; }
+.fan .card.hero { width: var(--hw); margin-left: calc(var(--hw) / -2); bottom: 10px; z-index: 5;
+  box-shadow: 0 0 0 2px #fff, 0 14px 30px rgba(242, 98, 46, .35); }
+@keyframes fanIn { from { transform: translateX(0) rotate(0deg) translateY(26px) scale(.9); opacity: 0; } }
+@keyframes fanSway { 50% { transform: translateX(calc(var(--x) * var(--spread))) rotate(calc(var(--r) * 1.12)) translateY(-3px); } }
+.fan .shine { position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .5) 50%, transparent 60%) no-repeat;
+  background-size: 260% 100%; animation: fanShine 4.2s ease-in-out 1.4s infinite; }
+@keyframes fanShine { 0% { background-position: 130% 0; } 45%, 100% { background-position: -130% 0; } }
+@media (max-height: 740px) {
+  .fan { --cw: 44px; --hw: 54px; --spread: .72; height: 80px; width: 210px; }
 }
