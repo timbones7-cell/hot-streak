@@ -149,10 +149,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .card.mod { background: radial-gradient(circle at 50% 40%, #ffe3a3, #f7b343 55%, #e8892a); }
 .card.mod .big, .card.x2 .big { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; font-size: 40cqw; letter-spacing: -.03em; }
 .card.mod .big { color: #fff; text-shadow: 0 2cqw 0 #7a3300; -webkit-text-stroke: 3cqw #a64b00; paint-order: stroke fill; }
-.card.mod .lbl { color: #7a3d00; }
 .card.x2 { background: radial-gradient(circle at 50% 40%, #ffd98a, #f5a333 50%, #e07a22); }
 .card.x2 .big { color: #fff; font-size: 46cqw; -webkit-text-stroke: 3cqw #8a3500; paint-order: stroke fill; text-shadow: 0 1.5cqw 0 #6b2800; }
-.card.x2 .lbl { color: #fff; text-shadow: 0 1px 0 #6b2800; }
 
 /* Action card colors follow the real game: Freeze light blue, Flip Three yellow, Second Chance red. */
 .card.freeze { background: radial-gradient(circle at 50% 35%, #eefaff, #9fdcf7 55%, #5bb8e8); }
