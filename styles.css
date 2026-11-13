@@ -152,15 +152,13 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #reveal .flipper { position: relative; width: 100%; aspect-ratio: 5 / 7; transform-style: preserve-3d; animation: flyflip .5s cubic-bezier(.3, .8, .3, 1) both; }
 #reveal .flipper > .card { position: absolute; inset: 0; width: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: var(--shadow-lg); }
 #reveal .flipper > .card.back { transform: rotateY(180deg); }
-#reveal.out .flipper { animation: flyout .25s ease-in forwards; }
+#reveal.out .flipper { animation: flyout .3s cubic-bezier(.4, 0, .2, 1) forwards; }
 @keyframes flyflip {
   0% { transform: translate(-60%, 110%) scale(.5) rotateY(180deg); opacity: 0; }
   30% { opacity: 1; }
   100% { transform: none; }
 }
-@keyframes flyout { to { transform: translateY(-20%) scale(.6); opacity: 0; } }
-#reveal.shake .flipper { animation: shakeCard .4s; }
-@keyframes shakeCard { 25%, 75% { transform: translateX(-5%); } 50% { transform: translateX(5%); } }
+@keyframes flyout { to { transform: translateY(-10%) scale(.8); opacity: 0; } }
 
 /* Event label: a clean pill in the middle of the table. */
 #stamp { position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%); z-index: 6; pointer-events: none; opacity: 0; white-space: nowrap; text-align: center;
@@ -179,9 +177,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   100% { opacity: 0; transform: translate(-50%, -50%) scale(.98); }
 }
 
-.shake { animation: shake .35s; }
-@keyframes shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
-.flashred::after, .flashice::after, .flashgold::after { content: ""; position: fixed; inset: 0; pointer-events: none; animation: flash .5s forwards; z-index: 40; }
+.flashred::after, .flashice::after, .flashgold::after { content: ""; position: fixed; inset: 0; pointer-events: none; animation: flash .7s ease-out forwards; z-index: 40; }
 .flashred::after { background: radial-gradient(circle, transparent 45%, rgba(229, 56, 75, .25)); }
 .flashice::after { background: radial-gradient(circle, transparent 40%, rgba(56, 189, 248, .3)); }
 .flashgold::after { background: radial-gradient(circle, transparent 40%, rgba(245, 179, 1, .28)); }
@@ -405,22 +401,28 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #modal.picker .pr { flex: none; text-align: right; font-size: 30px; font-weight: 800; line-height: 1; }
 #modal.picker .pr small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
 
-/* ---------- bust: card cracks in half, hand jolts red, BUST slams down ---------- */
-.shard { position: fixed !important; inset: auto !important; z-index: 46; margin: 0; pointer-events: none; box-shadow: 0 10px 24px rgba(15, 42, 68, .3) !important; }
-#stamp.bust { font-size: 30px; padding: 14px 34px; letter-spacing: .1em; box-shadow: 0 0 0 6px rgba(229, 56, 75, .22), 0 18px 40px rgba(229, 56, 75, .45); }
-#stamp.bust.show { animation: slam 1.3s cubic-bezier(.2, .8, .3, 1) forwards; }
-@keyframes slam {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.3) rotate(-10deg); }
-  13% { opacity: 1; transform: translate(-50%, -50%) scale(.9) rotate(-4deg); }
-  21% { transform: translate(-50%, -50%) scale(1.06) rotate(-4deg); }
-  29%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(.96) rotate(-4deg); }
+/* ---------- bust: the card swells and glows red, splits, and the halves drift apart ---------- */
+#reveal.busting .flipper > .card:not(.back) { animation: bustswell .42s cubic-bezier(.3, .7, .4, 1) forwards; }
+@keyframes bustswell {
+  to { transform: scale(1.07); box-shadow: 0 0 0 3px rgba(229, 56, 75, .9), 0 0 36px 6px rgba(229, 56, 75, .5), 0 18px 36px rgba(15, 42, 68, .3); }
 }
-.seat.busting { animation: seatjolt .4s ease-out, seatred .9s ease-out; }
-@keyframes seatjolt { 15%, 55% { transform: translateX(-6px); } 35%, 75% { transform: translateX(6px); } }
-@keyframes seatred { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 75, .7); background: #ffe3e6; } 40% { box-shadow: 0 0 0 8px rgba(229, 56, 75, .25); background: #ffecee; } 100% { box-shadow: var(--shadow); } }
-.seat.busting .seat-cards .card { animation: cardslump .5s ease-out; }
-@keyframes cardslump { 30% { transform: translateY(-5px) rotate(-4deg); } 100% { transform: none; } }
+.shard { position: fixed !important; right: auto; bottom: auto; z-index: 46; margin: 0; pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(229, 56, 75, .9), 0 0 30px 4px rgba(229, 56, 75, .45) !important; }
+#stamp.bust { font-size: 30px; padding: 14px 34px; letter-spacing: .1em; box-shadow: 0 0 0 6px rgba(229, 56, 75, .2), 0 18px 40px rgba(229, 56, 75, .4); }
+#stamp.bust.show { animation: bustin 1.35s cubic-bezier(.2, .8, .3, 1) forwards; }
+@keyframes bustin {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(.97); }
+  28%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.98); }
+}
+.seat.busting { animation: seatred 1s ease-out; }
+@keyframes seatred {
+  0% { box-shadow: 0 0 0 0 rgba(229, 56, 75, .55); background: #fff; }
+  35% { box-shadow: 0 0 0 7px rgba(229, 56, 75, .22); background: #ffe8eb; }
+  100% { box-shadow: var(--shadow); }
+}
+.seat.busting .seat-cards .card { transition: filter .6s ease; }
 
 /* ---------- round results: tall sheet, big rows, big Next round button ---------- */
 #modal.results { min-height: 84%; display: flex; flex-direction: column; padding: 26px 20px calc(var(--safe-b) + 20px); }

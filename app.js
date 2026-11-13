@@ -220,11 +220,11 @@
     document.body.appendChild(el);
     hideReveal(false);
     const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
-    const anim = el.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(.2) rotate(-25deg)`, opacity: 0.85 }], { duration: 420, easing: 'cubic-bezier(.55, 0, .75, .2)' });
+    const anim = el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.25) rotate(-8deg)`, opacity: 0.6 }], { duration: 460, easing: 'cubic-bezier(.4, 0, .2, 1)' });
     anim.onfinish = () => {
       el.remove();
       const c = playerEl(i);
-      if (c) c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 260 });
+      if (c) c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
     };
     // onfinish can be skipped if the page is backgrounded mid-animation; never leave the card behind.
     setTimeout(() => el.remove(), 700);
@@ -236,7 +236,6 @@
     t.classList.add('flash' + kind);
     setTimeout(() => t.classList.remove('flash' + kind), 650);
   }
-  function shake() { const t = $('#table'); t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake'); setTimeout(() => t.classList.remove('shake'), 500); }
   function stamp(text, kind, sub, player) {
     const el = $('#stamp');
     el.className = ''; void el.offsetWidth;
@@ -274,29 +273,31 @@
     el.classList.add('out');
     setTimeout(() => { if (tok === revealToken) { el.innerHTML = ''; el.className = ''; } }, 300);
   }
-  function shakeReveal() { const el = $('#reveal'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 
-  // Bust: split the revealed card along a jagged crack; the halves tumble apart and fall.
-  // Returns the card's center (as screen fractions) for the debris burst, or null if nothing is shown.
+  // Bust: split the (already swollen, glowing) revealed card along a jagged crack. The halves ease
+  // apart, tilt and sink while fading — one smooth motion, no snap.
   function shatterReveal() {
     const face = $('#reveal .flipper > .card:not(.back)');
-    if (!face) return null;
-    const a = $('#reveal .flipper').getBoundingClientRect();
+    if (!face) return;
+    const a = face.getBoundingClientRect();
     const crack = '55% 0, 42% 28%, 60% 50%, 41% 74%, 52% 100%';
     const halves = [
-      { clip: `polygon(0 0, ${crack}, 0 100%)`, to: 'translate(-70px, 160px) rotate(-28deg)' },
-      { clip: `polygon(${crack}, 100% 100%, 100% 0)`, to: 'translate(70px, 190px) rotate(32deg)' },
+      { clip: `polygon(0 0, ${crack}, 0 100%)`, mid: 'translate(-8px, 2px) rotate(-3deg)', to: 'translate(-38px, 70px) rotate(-14deg)' },
+      { clip: `polygon(${crack}, 100% 100%, 100% 0)`, mid: 'translate(8px, 3px) rotate(3deg)', to: 'translate(38px, 82px) rotate(15deg)' },
     ];
     halves.forEach((h) => {
       const el = face.cloneNode(true);
       el.classList.add('shard');
       Object.assign(el.style, { left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', clipPath: h.clip, webkitClipPath: h.clip });
       document.body.appendChild(el);
-      el.animate([{ transform: 'none', opacity: 1 }, { transform: h.to, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.45, 0, .8, .6)', fill: 'forwards' });
-      setTimeout(() => el.remove(), 700);
+      el.animate([
+        { transform: 'none', opacity: 1 },
+        { transform: h.mid, opacity: 1, offset: 0.3 },
+        { transform: h.to, opacity: 0 },
+      ], { duration: 900, easing: 'cubic-bezier(.3, .6, .35, 1)', fill: 'forwards' });
+      setTimeout(() => el.remove(), 950);
     });
     hideReveal(false);
-    return { x: (a.left + a.width / 2) / innerWidth, y: (a.top + a.height / 2) / innerHeight };
   }
 
   // ---------------- rendering ----------------
@@ -458,11 +459,12 @@
         await sleep(ev.card.kind === 'num' ? 300 : 500);
         break;
       case 'bust': {
-        // The duplicate shakes, then cracks in half and falls apart; the hand jolts red under a BUST slam.
-        shakeReveal(); flash('red'); shake();
-        await sleep(330);
-        const at = shatterReveal();
-        if (at) fx.burst(60, at.y, ['#e5384b', '#ff7a85', '#8a0f1f', '#c9d3dc'], at.x);
+        // The duplicate swells and glows red, then splits and the halves drift apart; the hand
+        // pulses red under a BUST stamp.
+        $('#reveal').classList.add('busting');
+        flash('red');
+        await sleep(420);
+        shatterReveal();
         render(s, ev.p, ev.card.id);
         const seat = $(`#seats .seat[data-i="${ev.p}"]`);
         if (seat) seat.classList.add('busting');
