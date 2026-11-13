@@ -9,6 +9,7 @@
   const NUM_COLORS = ['#7c8798', '#e63946', '#f77f00', '#e0a400', '#5fae3e', '#12a36b', '#0fa3b1', '#2f80ed', '#5b4fe0', '#9b51e0', '#d63ab8', '#e8456b', '#8d5b2f'];
   const P_COLORS = ['#f0602b', '#1b8fd6', '#e0367a', '#2fa84f', '#8b5cf6', '#d99a00', '#0f9e8e', '#c2410c', '#3b5bdb', '#d6409f'];
   const pc = (i) => P_COLORS[i % P_COLORS.length];
+  const SEAT_MAX = 3; // up to this many players, show everyone's cards at once
 
   const SAVE = 'hotstreak.save.v1';
   const PREFS = 'hotstreak.prefs.v1';
@@ -31,8 +32,8 @@
   const arm = (k) => `<g transform="rotate(${k * 60} 32 32)"><path d="M32 32V5M24.5 11.5L32 18l7.5-6.5M27 21l5 4 5-4"/></g>`;
   const ICONS = {
     freeze: `<svg viewBox="0 0 64 64" fill="none" stroke="#053a63" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">${[0, 1, 2, 3, 4, 5].map(arm).join('')}<circle cx="32" cy="32" r="4" fill="#fff"/></svg>`,
-    flip3: `<svg viewBox="0 0 64 64"><g stroke="#6b0634" stroke-width="2.5"><rect x="6" y="15" width="25" height="35" rx="5" transform="rotate(-16 18 32)" fill="#ffc2da"/><rect x="19.5" y="12" width="25" height="35" rx="5" fill="#ffe3ee"/><rect x="33" y="15" width="25" height="35" rx="5" transform="rotate(16 46 32)" fill="#fff"/></g><text x="46" y="41" transform="rotate(16 46 32)" text-anchor="middle" font-size="22" font-weight="900" fill="#b0145a" font-family="ui-rounded, system-ui, sans-serif">3</text></svg>`,
-    second: `<svg viewBox="0 0 64 64"><path d="M32 57C10 41 4 31 4 21 4 12 11 6 19 6c6 0 10 3 13 8 3-5 7-8 13-8 8 0 15 6 15 15 0 10-6 20-28 36z" fill="#fff" stroke="#0f8a4c" stroke-width="3.5"/><path d="M32 21v18M23 30h18" stroke="#0f8a4c" stroke-width="6.5" stroke-linecap="round"/></svg>`,
+    flip3: `<svg viewBox="0 0 64 64"><g stroke="#6b4a00" stroke-width="2.5"><rect x="6" y="15" width="25" height="35" rx="5" transform="rotate(-16 18 32)" fill="#fff3b0"/><rect x="19.5" y="12" width="25" height="35" rx="5" fill="#fff9dc"/><rect x="33" y="15" width="25" height="35" rx="5" transform="rotate(16 46 32)" fill="#fff"/></g><text x="46" y="41" transform="rotate(16 46 32)" text-anchor="middle" font-size="22" font-weight="900" fill="#b07d00" font-family="ui-rounded, system-ui, sans-serif">3</text></svg>`,
+    second: `<svg viewBox="0 0 64 64"><path d="M32 57C10 41 4 31 4 21 4 12 11 6 19 6c6 0 10 3 13 8 3-5 7-8 13-8 8 0 15 6 15 15 0 10-6 20-28 36z" fill="#fff" stroke="#a8221b" stroke-width="3.5"/><path d="M32 21v18M23 30h18" stroke="#c62a22" stroke-width="6.5" stroke-linecap="round"/></svg>`,
   };
   const ACTION_NAME = { freeze: 'Freeze', flip3: 'Flip Three', second: 'Second Chance' };
 
@@ -203,10 +204,13 @@
     }
   }
 
-  // Deal animation: the revealed card shrinks into that player's score chip.
+  // Where a player's cards live on screen: their row in table view, else their score chip.
+  const playerEl = (i) => $(`#table.seatmode #seats .seat[data-i="${i}"] .seat-cards`) || $(`#rail .chip[data-i="${i}"]`);
+
+  // Deal animation: the revealed card shrinks into that player's spot.
   function flyToChip(card, i) {
     const from = $('#reveal .flipper');
-    const chip = $(`#rail .chip[data-i="${i}"]`);
+    const chip = playerEl(i);
     if (!from || !chip) { hideReveal(true); return; }
     const a = from.getBoundingClientRect(), b = chip.getBoundingClientRect();
     const wrap = document.createElement('div');
@@ -220,7 +224,7 @@
     const anim = el.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(.2) rotate(-25deg)`, opacity: 0.85 }], { duration: 420, easing: 'cubic-bezier(.55, 0, .75, .2)' });
     anim.onfinish = () => {
       el.remove();
-      const c = $(`#rail .chip[data-i="${i}"]`);
+      const c = playerEl(i);
       if (c) c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 260 });
     };
   }
@@ -298,7 +302,56 @@
         <div class="bar"><i style="width:${Math.min(100, (p.total / s.target) * 100)}%"></i></div></button>`;
     }).join('');
 
-    // focused player
+    // 2-3 players: everyone's cards on one screen. More: one player at a time.
+    const seatMode = s.players.length <= SEAT_MAX;
+    $('#table').classList.toggle('seatmode', seatMode);
+    if (seatMode) renderSeats(s, focus, turnP, newId);
+    else renderFocus(s, focus, turnP, newId);
+    const fp = s.players[focus];
+    setHeat(numsOf(fp), fp.status === 'active' && s.phase === 'play');
+
+    // controls
+    const ctr = $('#controls');
+    const canAct = !busy && turnP != null;
+    ctr.classList.toggle('locked', !canAct);
+    $('#btnFlip').classList.toggle('nudge', canAct);
+    $('#closeSub').textContent = turnP != null ? `bank ${breakdown(s.players[turnP]).score}` : 'bank points';
+  }
+
+  const bustCardHTML = (p, newId) => cardHTML(p.bust, p.bust.id === newId ? 'new' : '').replace(/<\/div>$/, '<div class="xmark">✕</div></div>');
+
+  function renderSeats(s, focus, turnP, newId) {
+    // 2 players: bigger cards, 5 per row, bonus cards fill the spare spots in row 2.
+    // 3 players: all 7 number slots in one row, bonus cards in a small row below.
+    const two = s.players.length <= 2;
+    $('#seats').style.setProperty('--cols', two ? 5 : 7);
+    $('#seats').innerHTML = s.players.map((p, i) => {
+      const b = breakdown(p);
+      const nums = p.cards.filter((c) => c.kind === 'num');
+      const cls = ['seat'];
+      if (i === turnP) cls.push('turn'); else if (i === focus) cls.push('focus');
+      if (p.status !== 'active') cls.push('out', p.status);
+      let row = nums.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
+      let used = nums.length;
+      if (p.bust) { row += bustCardHTML(p, newId); used++; }
+      for (let k = used; k < 7; k++) row += '<div class="slot"></div>';
+      const extras = p.cards.filter((c) => c.kind !== 'num');
+      if (p.second) extras.push(p.second);
+      const extrasHTML = extras.map((c) => cardHTML(c, (c.id === newId ? 'new ' : '') + 'extra')).join('');
+      if (two) row += extrasHTML;
+      const tag = i === turnP ? '<span class="tag-s turn">YOUR TURN</span>' : statusTag(p);
+      return `<div class="${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">
+        <div class="seat-head">
+          <div class="seat-name"><span class="nm">${esc(p.name)}</span>${i === s.dealer ? '<span class="dealer">D</span>' : ''}${tag}</div>
+          <div class="seat-score"><span class="seat-rd">+${b.score} <small>this round</small></span><span class="seat-tot">${p.total}</span></div>
+        </div>
+        <div class="seat-cards">${row}</div>
+        ${extras.length && !two ? `<div class="seat-extras">${extrasHTML}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderFocus(s, focus, turnP, newId) {
     const p = s.players[focus];
     const b = breakdown(p);
     const stage = $('#stage');
@@ -319,22 +372,14 @@
     const nums = p.cards.filter((c) => c.kind === 'num');
     $('#meter').innerHTML = Array.from({ length: 7 }, (_, k) => `<i class="${k < nums.length ? 'on' : ''}"></i>`).join('');
     $('#meter').classList.toggle('hot', nums.length >= 5 && p.status === 'active');
-    setHeat(nums.length, p.status === 'active' && s.phase === 'play');
 
     let tab = nums.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
-    if (p.bust) tab += cardHTML(p.bust, 'new').replace(/<\/div>$/, '<div class="xmark">✕</div></div>');
+    if (p.bust) tab += bustCardHTML(p, newId);
     if (!tab) tab = `<div class="emptyhint">${p.status === 'active' ? 'No number cards yet' : 'Out with no numbers'}</div>`;
     $('#tableau').innerHTML = tab;
     const extras = p.cards.filter((c) => c.kind !== 'num');
     if (p.second) extras.push(p.second);
     $('#extras').innerHTML = extras.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
-
-    // controls
-    const ctr = $('#controls');
-    const canAct = !busy && turnP != null;
-    ctr.classList.toggle('locked', !canAct);
-    $('#btnFlip').classList.toggle('nudge', canAct);
-    $('#closeSub').textContent = turnP != null ? `bank ${breakdown(s.players[turnP]).score}` : 'bank points';
   }
 
   // ---------------- event playback ----------------
@@ -387,7 +432,7 @@
         stamp('BUST!', 'bust', `Second ${ev.card.value}`);
         await sleep(550);
         hideReveal(true);
-        render(s, ev.p);
+        render(s, ev.p, ev.card.id);
         await sleep(1000);
         break;
       case 'saved':
