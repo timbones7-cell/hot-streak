@@ -336,9 +336,12 @@
   // that gives the biggest number cards while leaving room for a full bonus/action row of 7.
   // Sizes depend only on the screen, so cards never change size during a round.
   function layoutSeats() {
-    const body = $('#seats .seat-body');
-    if (!body) return;
-    const W = body.clientWidth, H = body.clientHeight, g = 6, rowGap = 8;
+    // Size for the tightest hand: a header that wraps to two lines (narrow phones) leaves less room.
+    const bodies = [...document.querySelectorAll('#seats .seat-body')];
+    if (!bodies.length) return;
+    const W = Math.min(...bodies.map((b) => b.clientWidth));
+    const H = Math.min(...bodies.map((b) => b.clientHeight));
+    const g = 6, rowGap = 8;
     let best = null;
     for (const cols of [2, 3, 4, 5, 7]) {
       const rows = Math.ceil(7 / cols);
