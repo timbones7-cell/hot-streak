@@ -278,6 +278,7 @@
     if (p.seven) return '<span class="tag-s closed">7 STREAK</span>';
     if (p.status === 'frozen') return '<span class="tag-s frozen">FROZEN</span>';
     if (p.status === 'stayed') return '<span class="tag-s closed">CLOSED</span>';
+    if (p.skipUsed) return '<span class="tag-s skip">SKIPPED</span>';
     return '';
   }
 
@@ -316,6 +317,10 @@
     ctr.classList.toggle('locked', !canAct);
     $('#btnFlip').classList.toggle('nudge', canAct);
     $('#closeSub').textContent = turnP != null ? `bank ${breakdown(s.players[turnP]).score}` : 'bank points';
+    const used = turnP != null && s.players[turnP].skipUsed;
+    const skipOk = canAct && game && game.canSkip(turnP);
+    $('#btnSkip').classList.toggle('off', !skipOk);
+    $('#skipSub').textContent = used ? 'used' : turnP != null && !skipOk ? 'last one in' : '1 per round';
   }
 
   const bustCardHTML = (p, newId) => cardHTML(p.bust, p.bust.id === newId ? 'new' : '').replace(/<\/div>$/, '<div class="xmark">✕</div></div>');
@@ -503,6 +508,11 @@
         toast(ev.forced ? `Out of cards, so ${nm(ev.p)} closes` : `${nm(ev.p)} closes with <b>${breakdown(s.players[ev.p]).score}</b>`);
         await sleep(750);
         break;
+      case 'skip':
+        render(s, ev.p);
+        toast(`${nm(ev.p)} skips this turn`);
+        await sleep(650);
+        break;
       case 'roundEnd':
         hideReveal(false);
         render(s, focusP);
@@ -680,7 +690,8 @@
     <p>Score the most points by flipping cards without getting a duplicate number. First to the target score (200 by default) at the end of a round wins.</p>
     <h3>Your turn</h3><ul>
       <li><b>FLIP</b>: take the next card. Hold the deck down and let go to flip. Slide your finger off before letting go to back out.</li>
-      <li><b>CLOSE</b>: bank your round points. You're out for the rest of the round, and action cards can't touch you anymore. Tapped it by mistake? Hit <b>Undo</b> within 5 seconds.</li></ul>
+      <li><b>CLOSE</b>: bank your round points. You're out for the rest of the round, and action cards can't touch you anymore. Tapped it by mistake? Hit <b>Undo</b> within 5 seconds.</li>
+      <li><b>SKIP</b> (house rule): pass your turn without flipping. You keep your cards and stay in the round. Each player gets one skip per round, and you can't skip if you're the only one left.</li></ul>
     <h3>Busting</h3><ul><li>Flip a number you already have and you <b>bust</b>: 0 points this round.</li></ul>
     <h3>7 Streak</h3><ul><li>Collect <b>7 different numbers</b>. The round ends right away for everyone and you get <b>+15</b>.</li></ul>
     <h3>The deck (94 cards)</h3>
@@ -843,6 +854,12 @@
     pump();
   };
   $('#undo').onclick = doUndo;
+  $('#btnSkip').onclick = () => {
+    if (!canAct() || !game.canSkip(game.s.awaiting.p)) return;
+    clearUndo();
+    game.skip();
+    pump();
+  };
   // Tap a score chip to peek at that player's cards.
   $('#rail').addEventListener('click', (e) => {
     const chip = e.target.closest('.chip');

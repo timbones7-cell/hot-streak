@@ -202,6 +202,31 @@ test('7 streak mid-chain discards action cards still waiting to resolve', () => 
   eq(Object.keys(g.s.setAside).length, 0);
 });
 
+test('skip passes the turn once per round and resets next round', () => {
+  const g = game(['A', 'B'], [N(5), N(3), N(7), N(8), N(9)]);
+  eq(g.canSkip(0), true);
+  g.skip();                       // A skips
+  eq(g.s.awaiting.p, 1);
+  eq(st(g, 0), 'active');
+  eq(g.s.players[0].cards.length, 1);
+  g.hit();                        // B 7
+  eq(g.canSkip(0), false);
+  g.skip();                       // ignored: already used
+  eq(g.s.awaiting.p, 0);
+  g.stay(); g.stay();
+  g.nextRound();
+  eq(g.s.players.every(p => !p.skipUsed), true);
+});
+
+test('cannot skip as the only active player', () => {
+  const g = game(['A', 'B'], [N(5), N(3), N(7)]);
+  g.stay();                       // A closes
+  eq(g.s.awaiting.p, 1);
+  eq(g.canSkip(1), false);
+  g.skip();
+  eq(g.s.awaiting.p, 1);
+});
+
 test('save/load round trip mid flip three', () => {
   const g = game(['A', 'B', 'C'], [N(5), N(3), N(2), A('flip3'), A('second'), N(3)]);
   g.hit(); g.chooseTarget(1); // B: SC kept...
@@ -217,7 +242,7 @@ test('random full games never crash', () => {
     let guard = 0;
     while (g.s.phase !== 'over' && guard++ < 20000) {
       const a = g.s.awaiting;
-      if (a.type === 'decide') (Math.random() < 0.7 ? g.hit() : g.stay());
+      if (a.type === 'decide') { const r = Math.random(); if (r < 0.1 && g.canSkip(a.p)) g.skip(); else if (r < 0.75) g.hit(); else g.stay(); }
       else if (a.type === 'target') g.chooseTarget(a.options[Math.floor(Math.random() * a.options.length)]);
       else if (a.type === 'summary') g.nextRound();
       const total = g.s.deck.length + g.s.discard.length + g.s.players.reduce((t, p) => t + p.cards.length + (p.second ? 1 : 0) + (p.bust ? 1 : 0), 0) +

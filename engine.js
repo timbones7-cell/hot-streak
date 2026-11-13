@@ -84,7 +84,7 @@
       s.round++;
       s.phase = 'play';
       s.summary = null;
-      for (const p of s.players) { p.status = 'active'; p.seven = false; }
+      for (const p of s.players) { p.status = 'active'; p.seven = false; p.skipUsed = false; }
       const n = s.players.length;
       s.tasks = [];
       for (let k = 1; k <= n; k++) s.tasks.push({ t: 'deal', p: (s.dealer + k) % n });
@@ -290,6 +290,25 @@
       s.awaiting = null;
       s.players[a.p].status = 'stayed';
       this.emit('stay', { p: a.p });
+      s.tasks = [{ t: 'turn' }];
+      this.run();
+    }
+
+    // House rule: pass your turn without drawing, once per round. You stay in the round.
+    // Not allowed when you're the only active player (the turn would just come back).
+    canSkip(p) {
+      const s = this.s;
+      const pl = s.players[p];
+      return !pl.skipUsed && pl.status === 'active' && s.players.filter((q) => q.status === 'active').length > 1;
+    }
+
+    skip() {
+      const s = this.s;
+      const a = s.awaiting;
+      if (!a || a.type !== 'decide' || !this.canSkip(a.p)) return;
+      s.awaiting = null;
+      s.players[a.p].skipUsed = true;
+      this.emit('skip', { p: a.p });
       s.tasks = [{ t: 'turn' }];
       this.run();
     }
