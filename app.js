@@ -924,8 +924,29 @@
     addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
 
+  // Opening message for Des: hearts float up behind it; fades out after a few seconds or on tap.
+  function showSplash() {
+    const sp = $('#splash');
+    const hearts = sp.querySelector('.sp-hearts');
+    hearts.innerHTML = Array.from({ length: 16 }, (_, k) => {
+      const v = (min, max) => (min + Math.random() * (max - min)).toFixed(2);
+      return `<i style="left:${v(2, 94)}%; --s:${v(14, 34)}px; --d:${v(4.5, 7.5)}s; --delay:${(k * 0.35).toFixed(2)}s; --o:${v(0.35, 0.8)}; --drift:${v(-40, 40)}px; --rot:${v(-30, 30)}deg"></i>`;
+    }).join('');
+    sp.classList.remove('hidden');
+    let done = false;
+    const hide = () => {
+      if (done) return;
+      done = true;
+      sp.classList.add('out');
+      setTimeout(() => { sp.classList.add('hidden'); hearts.innerHTML = ''; }, 650);
+    };
+    sp.addEventListener('click', hide);
+    setTimeout(hide, 3800);
+  }
+
   // Testing hook: open with ?debug to get window.__deal(names, cardsInDrawOrder).
-  if (/[?&]debug\b/.test(location.search)) {
+  const debug = /[?&]debug\b/.test(location.search);
+  if (debug) {
     window.__deal = (names, cards, target = 200) => {
       const filler = HotStreak.buildDeck().filter((c) => c.kind === 'num');
       startGame(names, target, filler.concat(cards.slice().reverse()));
@@ -933,4 +954,5 @@
   }
 
   showSetup();
+  if (!debug) showSplash();
 })();
