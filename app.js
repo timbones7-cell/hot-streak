@@ -24,7 +24,6 @@
   let busy = false;
   let focusP = 0;
   let lastTurnP = null;
-  let shownPts = { p: -1, v: 0 };
   let dealing = false;
   let undo = null; // { snap, timer, pending } after a CLOSE, until the next action
 
@@ -205,7 +204,7 @@
   }
 
   // Where a player's cards live on screen: their row in table view, else their score chip.
-  const playerEl = (i) => $(`#table.seatmode #seats .seat[data-i="${i}"] .seat-cards`) || $(`#rail .chip[data-i="${i}"]`);
+  const playerEl = (i) => $(`#seats .seat[data-i="${i}"] .seat-cards`) || $(`#rail .chip[data-i="${i}"]`);
 
   // Deal animation: the revealed card shrinks into that player's spot.
   function flyToChip(card, i) {
@@ -302,11 +301,10 @@
         <div class="bar"><i style="width:${Math.min(100, (p.total / s.target) * 100)}%"></i></div></button>`;
     }).join('');
 
-    // 2-3 players: everyone's cards on one screen. More: one player at a time.
-    const seatMode = s.players.length <= SEAT_MAX;
-    $('#table').classList.toggle('seatmode', seatMode);
-    if (seatMode) renderSeats(s, focus, turnP, newId);
-    else renderFocus(s, focus, turnP, newId);
+    // 2-3 players: everyone's hand on one screen. More: score rail plus the focused hand.
+    const railMode = s.players.length > SEAT_MAX;
+    $('#table').classList.toggle('railmode', railMode);
+    renderSeats(s, focus, turnP, newId, railMode ? [focus] : null);
     const fp = s.players[focus];
     setHeat(numsOf(fp), fp.status === 'active' && s.phase === 'play');
 
@@ -323,14 +321,36 @@
 
   const bustCardHTML = (p, newId) => cardHTML(p.bust, p.bust.id === newId ? 'new' : '').replace(/<\/div>$/, '<div class="xmark">✕</div></div>');
 
-  function renderSeats(s, focus, turnP, newId) {
-    // Number cards on top, bonus/action cards in their own row along the bottom, both at a
-    // fixed size (all 7 possible extras fit in that row). 2 players: each hand fills half the
-    // screen with 5 slots per row. 3 players: all 7 slots in one row.
-    const two = s.players.length <= 2;
-    $('#seats').classList.toggle('two', two);
-    $('#seats').style.setProperty('--cols', two ? 5 : 7);
+  // Size hand cards to the screen (not the hand): pick the slot layout (2, 3, 4, 5 or 7 per row)
+  // that gives the biggest number cards while leaving room for a full bonus/action row of 7.
+  // Sizes depend only on the screen, so cards never change size during a round.
+  function layoutSeats() {
+    const body = $('#seats .seat-body');
+    if (!body) return;
+    const W = body.clientWidth, H = body.clientHeight, g = 6, rowGap = 8;
+    let best = null;
+    for (const cols of [2, 3, 4, 5, 7]) {
+      const rows = Math.ceil(7 / cols);
+      const byWidth = (W - (cols - 1) * g) / cols;
+      // Bonus/action cards are ~62% of a number card, and all 7 must fit across.
+      const byHeight = (H - rowGap - (rows - 1) * g) / (1.4 * (rows + 0.62));
+      const cw = Math.floor(Math.min(byWidth, byHeight, 96));
+      if (!best || cw > best.cw) best = { cols, cw, rows };
+    }
+    // Bonus/action cards then take whatever height is left, as long as all 7 still fit across.
+    const numsH = best.rows * best.cw * 1.4 + (best.rows - 1) * g;
+    const xw = Math.floor(Math.min((W - 6 * g) / 7, (H - rowGap - numsH) / 1.4, best.cw));
+    const seats = $('#seats');
+    seats.style.setProperty('--cols', best.cols);
+    seats.style.setProperty('--cw', best.cw + 'px');
+    seats.style.setProperty('--xw', xw + 'px');
+  }
+
+  // only: player indexes to show (rail mode shows just the focused hand), or null for everyone.
+  function renderSeats(s, focus, turnP, newId, only) {
+    // Each hand: name/score row, number slots, then a bonus/action row with room for all 7.
     $('#seats').innerHTML = s.players.map((p, i) => {
+      if (only && !only.includes(i)) return '';
       const b = breakdown(p);
       const nums = p.cards.filter((c) => c.kind === 'num');
       const cls = ['seat'];
@@ -349,41 +369,13 @@
           <div class="seat-name"><span class="nm">${esc(p.name)}</span>${i === s.dealer ? '<span class="dealer">D</span>' : ''}${tag}</div>
           <div class="seat-score"><span class="seat-rd">+${b.score} <small>this round</small></span><span class="seat-tot">${p.total}</span></div>
         </div>
-        <div class="seat-cards">${row}</div>
-        <div class="seat-extras">${extrasHTML}</div>
+        <div class="seat-body">
+          <div class="seat-cards">${row}</div>
+          <div class="seat-extras">${extrasHTML}</div>
+        </div>
       </div>`;
     }).join('');
-  }
-
-  function renderFocus(s, focus, turnP, newId) {
-    const p = s.players[focus];
-    const b = breakdown(p);
-    const stage = $('#stage');
-    stage.style.setProperty('--pc', pc(focus));
-    stage.classList.toggle('isbust', p.status === 'busted');
-    stage.classList.toggle('isfrozen', p.status === 'frozen');
-    $('#focusName').textContent = p.name;
-    let st = { active: 'In play', stayed: 'Closed', frozen: 'Frozen', busted: 'Busted' }[p.status];
-    if (p.seven) st = '7 streak!';
-    if (focus === turnP) st = 'Your turn';
-    $('#focusStatus').textContent = st;
-    const ptsEl = $('#ptsNum');
-    const v = b.score;
-    ptsEl.textContent = v;
-    if (shownPts.p === focus && shownPts.v !== v) { ptsEl.classList.remove('pop'); void ptsEl.offsetWidth; ptsEl.classList.add('pop'); }
-    shownPts = { p: focus, v };
-
-    const nums = p.cards.filter((c) => c.kind === 'num');
-    $('#meter').innerHTML = Array.from({ length: 7 }, (_, k) => `<i class="${k < nums.length ? 'on' : ''}"></i>`).join('');
-    $('#meter').classList.toggle('hot', nums.length >= 5 && p.status === 'active');
-
-    let tab = nums.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
-    if (p.bust) tab += bustCardHTML(p, newId);
-    if (!tab) tab = `<div class="emptyhint">${p.status === 'active' ? 'No number cards yet' : 'Out with no numbers'}</div>`;
-    $('#tableau').innerHTML = tab;
-    const extras = p.cards.filter((c) => c.kind !== 'num');
-    if (p.second) extras.push(p.second);
-    $('#extras').innerHTML = extras.map((c) => cardHTML(c, c.id === newId ? 'new' : '')).join('');
+    layoutSeats();
   }
 
   // ---------------- event playback ----------------
@@ -850,6 +842,7 @@
     pump();
   };
   $('#undo').onclick = doUndo;
+  addEventListener('resize', () => { if (game && $('#table').classList.contains('active')) layoutSeats(); });
   $('#btnSkip').onclick = () => {
     if (!canAct() || !game.canSkip(game.s.awaiting.p)) return;
     clearUndo();
