@@ -187,6 +187,21 @@ test('next round rotates dealer and keeps deck going', () => {
   eq(g.s.awaiting.p, 1);
 });
 
+test('7 streak mid-chain discards action cards still waiting to resolve', () => {
+  const fz = A('freeze');
+  const g = game(['A', 'B'], [N(5), N(3), N(6), N(7), N(8), N(9), A('flip3'), N(1), A('flip3'), fz, N(2), N(4), N(10)]);
+  g.hit(); g.hit(); g.hit(); g.hit(); // A 6, B 7, A 8, B 9
+  g.hit();                            // A draws Flip Three
+  g.chooseTarget(1);                  // B flips: 1, flip3 (aside), freeze (aside)
+  eq(g.s.awaiting.type, 'target');    // set-aside Flip Three resolves first
+  g.chooseTarget(1);                  // B flips 2, 4, 10 -> 7 numbers
+  eq(g.s.players[1].seven, true);
+  eq(g.s.phase, 'summary');
+  eq(g.s.discard.some(c => c.id === fz.id), true);
+  eq(g.s.tasks.length, 0);
+  eq(Object.keys(g.s.setAside).length, 0);
+});
+
 test('save/load round trip mid flip three', () => {
   const g = game(['A', 'B', 'C'], [N(5), N(3), N(2), A('flip3'), A('second'), N(3)]);
   g.hit(); g.chooseTarget(1); // B: SC kept...
@@ -195,7 +210,7 @@ test('save/load round trip mid flip three', () => {
 });
 
 test('random full games never crash', () => {
-  for (let n = 0; n < 300; n++) {
+  for (let n = 0; n < 2000; n++) {
     const names = Array.from({ length: 2 + (n % 7) }, (_, i) => 'P' + i);
     const g = new Game(names, { target: 200 });
     g.startRound();

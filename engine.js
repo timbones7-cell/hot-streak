@@ -117,11 +117,11 @@
       const s = this.s;
       switch (task.t) {
         case 'deal':
-          if (s.players[task.p].status === 'active') this.draw(task.p, null);
+          if (s.players[task.p].status === 'active') this.draw(task.p, null, true);
           break;
         case 'turn': {
           const nxt = this.nextActive(s.turn);
-          if (nxt < 0) { s.tasks = []; this.endRound(); }
+          if (nxt < 0) this.endRound();
           else { s.turn = nxt; s.awaiting = { type: 'decide', p: nxt }; this.emit('turn', { p: nxt }); }
           break;
         }
@@ -158,12 +158,12 @@
     }
 
     // f3: id of the Flip Three this draw belongs to (actions get set aside), or null.
-    draw(p, f3) {
+    draw(p, f3, deal) {
       const s = this.s;
       const pl = s.players[p];
       const card = this.takeCard();
       if (!card) { pl.status = 'stayed'; this.emit('stay', { p, forced: true }); return; }
-      this.emit('draw', { p, card, f3: !!f3 });
+      this.emit('draw', { p, card, f3: !!f3, deal: !!deal });
 
       if (card.kind === 'num') {
         const dup = pl.cards.some((c) => c.kind === 'num' && c.value === card.value);
@@ -183,7 +183,6 @@
         if (numCount(pl) === 7) {
           pl.seven = true;
           pl.status = 'stayed';
-          s.tasks = [];
           this.emit('seven', { p, card });
           this.endRound();
           return;
@@ -299,6 +298,11 @@
 
     endRound() {
       const s = this.s;
+      // A 7 Streak can end the round mid-chain: discard any action cards still waiting to resolve.
+      for (const t of s.tasks) if (t.t === 'target') s.discard.push(t.card);
+      for (const k of Object.keys(s.setAside)) s.discard.push(...s.setAside[k]);
+      s.tasks = [];
+      s.setAside = {};
       const rows = s.players.map((p, i) => Object.assign({ i, before: p.total }, breakdown(p)));
       rows.forEach((r) => { s.players[r.i].total += r.score; r.after = s.players[r.i].total; });
       s.summary = { round: s.round, rows };
