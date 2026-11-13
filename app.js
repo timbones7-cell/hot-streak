@@ -46,11 +46,11 @@
       case 'x2':
         return `<div class="card x2 ${cls}"><span class="big">×2</span></div>`;
       case 'freeze':
-        return `<div class="card freeze ${cls}"><div class="ic">${ICONS.freeze}</div><span class="lbl">FREEZE</span></div>`;
+        return `<div class="card freeze ${cls}"><div class="ic">${ICONS.freeze}</div></div>`;
       case 'flip3':
-        return `<div class="card flip3 ${cls}"><div class="ic">${ICONS.flip3}</div><span class="lbl">FLIP THREE</span></div>`;
+        return `<div class="card flip3 ${cls}"><div class="ic">${ICONS.flip3}</div></div>`;
       case 'second':
-        return `<div class="card second ${cls}"><div class="ic">${ICONS.second}</div><span class="lbl">2ND CHANCE</span></div>`;
+        return `<div class="card second ${cls}"><div class="ic">${ICONS.second}</div></div>`;
     }
     return '';
   }

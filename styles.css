@@ -143,7 +143,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .card .tl { left: 12cqw; top: 11cqw; }
 .card .br { right: 12cqw; bottom: 11cqw; transform: rotate(180deg); }
 .card .lbl { position: absolute; left: 0; right: 0; bottom: 10cqw; text-align: center; font-weight: 900; font-size: 10.5cqw; letter-spacing: .06em; }
-.card .ic { position: absolute; left: 50%; top: 44%; width: 62cqw; height: 62cqw; transform: translate(-50%, -50%); }
+.card .ic { position: absolute; left: 50%; top: 50%; width: 74cqw; height: 74cqw; transform: translate(-50%, -50%); }
 .card .ic svg { width: 100%; height: 100%; display: block; }
 
 .card.mod { background: radial-gradient(circle at 50% 40%, #ffe3a3, #f7b343 55%, #e8892a); }
@@ -154,11 +154,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 /* Action card colors follow the real game: Freeze light blue, Flip Three yellow, Second Chance red. */
 .card.freeze { background: radial-gradient(circle at 50% 35%, #eefaff, #9fdcf7 55%, #5bb8e8); }
-.card.freeze .lbl { color: #0b3d66; }
 .card.flip3 { background: radial-gradient(circle at 50% 35%, #fffbd0, #ffe94a 55%, #f2c500); }
-.card.flip3 .lbl { color: #5a4300; }
 .card.second { background: radial-gradient(circle at 50% 35%, #ffd6d2, #f0483e 55%, #c62a22); }
-.card.second .lbl { color: #fff; text-shadow: 0 1px 0 #6e0f0b; }
 
 .card.back { background:
   radial-gradient(circle closest-side at 50% 50%, var(--cream) 0 31%, transparent 32%),
