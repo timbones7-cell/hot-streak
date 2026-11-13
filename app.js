@@ -7,7 +7,7 @@
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const NUM_COLORS = ['#7c8798', '#e63946', '#f77f00', '#e0a400', '#5fae3e', '#12a36b', '#0fa3b1', '#2f80ed', '#5b4fe0', '#9b51e0', '#d63ab8', '#e8456b', '#8d5b2f'];
-  const P_COLORS = ['#ff8a3d', '#3ddcff', '#ff5c9a', '#a3e635', '#c084fc', '#ffd23f', '#34d399', '#f472b6', '#60a5fa', '#fb7185'];
+  const P_COLORS = ['#f0602b', '#1b8fd6', '#e0367a', '#2fa84f', '#8b5cf6', '#d99a00', '#0f9e8e', '#c2410c', '#3b5bdb', '#d6409f'];
   const pc = (i) => P_COLORS[i % P_COLORS.length];
 
   const SAVE = 'hotstreak.save.v1';
@@ -265,7 +265,7 @@
         lastTurnP = null;
         focusP = (ev.dealer + 1) % s.players.length;
         render(s, focusP);
-        banner(`Round ${ev.round}`, `${s.players[ev.dealer].name} deals`, '#ffd23f');
+        banner(`Round ${ev.round}`, `${s.players[ev.dealer].name} deals`, '#1677c9');
         sfx.shuffle();
         await sleep(1100);
         break;
