@@ -499,7 +499,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #splash { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; overflow: hidden; cursor: pointer;
   background: radial-gradient(120% 80% at 50% 35%, #fff 0%, #ffe6ee 45%, #cdebfb 100%); transition: opacity .6s ease, visibility .6s; }
 #splash.out { opacity: 0; visibility: hidden; }
-.sp-body { position: relative; text-align: center; padding: 0 24px; }
+.sp-body { position: relative; z-index: 1; text-align: center; padding: 0 24px; }
 .sp-heart { width: 96px; height: 88px; margin: 0 auto 18px; animation: spPop .7s cubic-bezier(.2, 1.3, .4, 1) both, spBeat 1.3s ease-in-out .8s infinite; }
 .sp-heart svg { width: 100%; height: 100%; display: block; fill: #f0436a; filter: drop-shadow(0 10px 22px rgba(240, 67, 106, .4)); }
 @keyframes spPop { from { transform: scale(.3); opacity: 0; } }
