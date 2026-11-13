@@ -297,15 +297,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #heat.beat { animation: heatbeat var(--beat, 1s) ease-in-out infinite; }
 @keyframes heatbeat { 0%, 100% { filter: none; } 12% { filter: saturate(1.5) brightness(1.04); } 24% { filter: none; } 36% { filter: saturate(1.3); } }
 
-/* ---------- stakes ---------- */
-.stakes { display: flex; flex-direction: column; gap: 6px; }
-.stakes small { color: var(--muted); font-weight: 700; font-size: 13px; }
-.stakes input { font: inherit; font-size: 17px; font-weight: 700; color: var(--ink); background: var(--soft); border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 12px; outline: none; -webkit-user-select: text; user-select: text; }
-.stakes input:focus { border-color: var(--brand); background: #fff; }
-.stakes input::placeholder { color: #95abbe; }
-.stakesbox { margin: 4px 0 14px; padding: 12px 14px; border-radius: 16px; background: #fff1e8; border: 2px dashed var(--hot); text-align: center; font-weight: 800; }
-.stakesbox b { display: block; font-size: 19px; color: var(--hot); margin: 2px 0; }
-
 /* ---------- hold to flip ---------- */
 .deckbtn { touch-action: none; -webkit-touch-callout: none; }
 .deckbtn.charging { transform: translateY(2px) scale(.985); box-shadow: 0 4px 0 #b83d12, 0 0 0 4px rgba(255, 183, 3, .45), 0 12px 26px rgba(232, 80, 31, .35); animation: none; }
@@ -318,13 +309,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @keyframes riffleA { 50% { transform: translate(-14px, -6px) rotate(-14deg); } }
 @keyframes riffleB { 50% { transform: translate(14px, -4px) rotate(14deg); } }
 .flycard { position: fixed; z-index: 45; pointer-events: none; margin: 0; }
-
-/* ---------- announcer ---------- */
-#callout { position: fixed; left: 50%; top: calc(var(--safe-t) + 128px); z-index: 32; transform: translateX(-50%) rotate(-3deg); pointer-events: none; opacity: 0; white-space: nowrap; max-width: 92vw;
-  padding: 9px 16px; border-radius: 18px; background: var(--ink); color: #fff; font-weight: 900; font-size: 18px; box-shadow: 0 10px 24px rgba(15, 42, 68, .3); }
-#callout::after { content: ""; position: absolute; left: 24px; bottom: -8px; border: 8px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
-#callout.show { animation: callout 1.9s cubic-bezier(.2, 1.4, .4, 1) forwards; }
-@keyframes callout { 0% { opacity: 0; transform: translateX(-50%) rotate(-3deg) scale(.6); } 12% { opacity: 1; transform: translateX(-50%) rotate(-3deg) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) rotate(-3deg) translateY(-8px); } }
 
 /* ---------- achievements ---------- */
 #badge { position: fixed; left: 50%; top: calc(var(--safe-t) + 10px); z-index: 70; transform: translate(-50%, -140%); transition: transform .45s cubic-bezier(.2, 1.3, .4, 1); pointer-events: none;

@@ -17,7 +17,7 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
   };
-  const prefs = Object.assign({ names: [], count: 2, target: 200, sound: true, music: true, stakes: '' }, store.get(PREFS) || {});
+  const prefs = Object.assign({ names: [], count: 2, target: 200 }, store.get(PREFS) || {});
 
   let game = null;
   let busy = false;
@@ -55,99 +55,6 @@
   }
   const cardName = (c) => (c.kind === 'num' ? String(c.value) : c.kind === 'mod' ? `+${c.value}` : c.kind === 'x2' ? '×2' : ACTION_NAME[c.kind]);
 
-  // ---------------- sound ----------------
-  const sfx = (() => {
-    let ctx = null;
-    function raw() {
-      if (!ctx) {
-        const C = window.AudioContext || window.webkitAudioContext;
-        if (!C) return null;
-        ctx = new C();
-      }
-      if (ctx.state === 'suspended' && document.visibilityState === 'visible') ctx.resume();
-      return ctx;
-    }
-    function ac() { return prefs.sound ? raw() : null; }
-    let charge = null;
-    function tone(freq, dur, o = {}) {
-      const c = ac(); if (!c) return;
-      const t = c.currentTime + (o.delay || 0);
-      const osc = c.createOscillator(), g = c.createGain();
-      osc.type = o.type || 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-      if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(o.vol || 0.15, t + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(g).connect(c.destination);
-      osc.start(t); osc.stop(t + dur + 0.05);
-    }
-    function noise(dur, o = {}) {
-      const c = ac(); if (!c) return;
-      const t = c.currentTime + (o.delay || 0);
-      const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-      const src = c.createBufferSource(); src.buffer = buf;
-      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = o.q || 0.8;
-      f.frequency.setValueAtTime(o.freq || 2000, t);
-      if (o.sweep) f.frequency.exponentialRampToValueAtTime(o.sweep, t + dur);
-      const g = c.createGain();
-      g.gain.setValueAtTime(o.vol || 0.2, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      src.connect(f).connect(g).connect(c.destination);
-      src.start(t);
-    }
-    return {
-      raw,
-      noise,
-      unlock() { raw(); },
-      // Rising hum while the deck is held down.
-      chargeStart() {
-        const c = ac(); if (!c || charge) return;
-        const t = c.currentTime;
-        const osc = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(170, t);
-        osc.frequency.exponentialRampToValueAtTime(560, t + 1.4);
-        lfo.frequency.setValueAtTime(6, t); lfo.frequency.linearRampToValueAtTime(16, t + 1.4);
-        lg.gain.value = 18;
-        lfo.connect(lg).connect(osc.frequency);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.07, t + 0.15);
-        osc.connect(g).connect(c.destination);
-        osc.start(t); lfo.start(t);
-        charge = { osc, lfo, g };
-      },
-      chargeStop() {
-        if (!charge || !ctx) { charge = null; return; }
-        const t = ctx.currentTime;
-        charge.g.gain.cancelScheduledValues(t);
-        charge.g.gain.setValueAtTime(charge.g.gain.value, t);
-        charge.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-        charge.osc.stop(t + 0.1); charge.lfo.stop(t + 0.1);
-        charge = null;
-      },
-      heartbeat() { tone(62, 0.16, { vol: 0.32, slide: 40 }); tone(58, 0.18, { vol: 0.24, slide: 38, delay: 0.2 }); },
-      badge() { [784, 988, 1319].forEach((f, i) => tone(f, 0.2, { type: 'triangle', vol: 0.09, delay: i * 0.07 })); },
-      flip() { noise(0.14, { vol: 0.3, freq: 1500, sweep: 7000 }); tone(1000, 0.05, { type: 'triangle', vol: 0.05, delay: 0.1 }); },
-      place(card) {
-        tone(card.kind === 'num' ? 240 : 420, 0.13, { type: 'triangle', vol: 0.2, slide: 110 });
-        if (card.kind !== 'num') { tone(880, 0.16, { type: 'triangle', vol: 0.09, delay: 0.06 }); tone(1320, 0.22, { type: 'triangle', vol: 0.08, delay: 0.13 }); }
-      },
-      bust() { tone(340, 0.65, { type: 'sawtooth', vol: 0.13, slide: 45 }); noise(0.4, { vol: 0.3, freq: 350 }); },
-      saved() { [660, 880, 1320].forEach((f, i) => tone(f, 0.28, { type: 'triangle', vol: 0.13, delay: i * 0.08 })); },
-      seven() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.4, { type: 'triangle', vol: 0.15, delay: i * 0.085 })); noise(0.9, { vol: 0.06, freq: 8000, delay: 0.5 }); },
-      freeze() { [2100, 2700, 3300, 2500].forEach((f, i) => tone(f, 0.45, { vol: 0.045, delay: i * 0.06 })); tone(1300, 0.7, { vol: 0.06, slide: 380 }); },
-      flip3() { [420, 530, 670].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.06, delay: i * 0.13 })); },
-      turn() { tone(660, 0.12, { type: 'triangle', vol: 0.09 }); tone(990, 0.18, { type: 'triangle', vol: 0.09, delay: 0.1 }); },
-      close() { tone(523, 0.15, { type: 'triangle', vol: 0.12 }); tone(784, 0.28, { type: 'triangle', vol: 0.12, delay: 0.1 }); },
-      shuffle() { for (let i = 0; i < 7; i++) noise(0.05, { vol: 0.14, freq: 2600, delay: i * 0.055 }); },
-      click() { tone(1400, 0.03, { type: 'square', vol: 0.035 }); },
-      win() { [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i === 6 ? 0.8 : 0.22, { type: 'triangle', vol: 0.15, delay: i * 0.13 })); },
-    };
-  })();
-
   // ---------------- effects ----------------
   const fx = (() => {
     const cv = $('#fx'); const cx = cv.getContext('2d');
@@ -176,83 +83,15 @@
     return { burst };
   })();
 
-  // ---------------- background music (generated, loops forever) ----------------
-  const music = (() => {
-    const STEP = 60 / 88 / 2; // eighth notes at 88 bpm
-    const CHORDS = [
-      [261.63, 329.63, 392.0, 493.88], // Cmaj7
-      [220.0, 261.63, 329.63, 392.0], // Am7
-      [174.61, 220.0, 261.63, 329.63], // Fmaj7
-      [196.0, 246.94, 293.66, 349.23], // G7
-    ];
-    const ARP = [0, 2, 1, 3, 2, 1, 3, 2];
-    let timer = null, out = null, nextT = 0, step = 0, hatBuf = null;
-    function voice(c, freq, t, dur, o) {
-      const osc = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
-      osc.type = o.type; osc.frequency.value = freq;
-      f.type = 'lowpass'; f.frequency.value = o.cutoff;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(o.vol, t + o.attack);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(f).connect(g).connect(out);
-      osc.start(t); osc.stop(t + dur + 0.05);
-    }
-    function hat(c, t) {
-      if (!hatBuf) {
-        hatBuf = c.createBuffer(1, Math.ceil(c.sampleRate * 0.05), c.sampleRate);
-        const d = hatBuf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-      }
-      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-      src.buffer = hatBuf; f.type = 'highpass'; f.frequency.value = 7000;
-      g.gain.setValueAtTime(0.018, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
-      src.connect(f).connect(g).connect(out); src.start(t);
-    }
-    function playStep(c, st, t) {
-      const pos = st % 8, ch = CHORDS[Math.floor(st / 8) % 4];
-      if (pos === 0) ch.forEach((f) => voice(c, f, t, STEP * 8.3, { type: 'sine', vol: 0.02, cutoff: 1300, attack: 0.45 }));
-      if (pos === 0 || pos === 5) voice(c, ch[0] / 2, t, STEP * 2.6, { type: 'triangle', vol: 0.05, cutoff: 500, attack: 0.01 });
-      if (pos !== 7 || st % 16 === 7) voice(c, ch[ARP[pos]] * 2, t, 0.35, { type: 'triangle', vol: 0.02, cutoff: 2600, attack: 0.005 });
-      if (pos % 2 === 1) hat(c, t);
-    }
-    function tick() {
-      const c = sfx.raw(); if (!c || !out) return;
-      if (nextT < c.currentTime) nextT = c.currentTime + 0.05; // skip, don't burst, after a pause
-      while (nextT < c.currentTime + 0.3) { playStep(c, step, nextT); nextT += STEP; step++; }
-    }
-    return {
-      start() {
-        if (!prefs.music || timer) return;
-        const c = sfx.raw(); if (!c) return;
-        out = c.createGain();
-        out.gain.setValueAtTime(0.0001, c.currentTime);
-        out.gain.exponentialRampToValueAtTime(1, c.currentTime + 2);
-        out.connect(c.destination);
-        nextT = c.currentTime + 0.1; step = 0;
-        timer = setInterval(tick, 100);
-        tick();
-      },
-      stop() {
-        if (!timer) return;
-        clearInterval(timer); timer = null;
-        const c = sfx.raw(), o = out; out = null;
-        if (!c || !o) return;
-        o.gain.cancelScheduledValues(c.currentTime);
-        o.gain.setValueAtTime(Math.max(o.gain.value, 0.0001), c.currentTime);
-        o.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.5);
-        setTimeout(() => o.disconnect(), 700);
-      },
-    };
-  })();
-
-  // ---------------- heat + heartbeat ----------------
+  // ---------------- heat ----------------
   const numsOf = (p) => p.cards.filter((c) => c.kind === 'num').length;
   function setHeat(n, live) {
     $('#heat').style.opacity = live && n >= 3 ? (Math.min(1, (n - 2) / 5) * 0.9).toFixed(2) : 0;
   }
+  // Pulse the warm glow while the player on turn holds 5-6 numbers.
   const heart = (() => {
-    let timer = null, rate = 0;
-    function stop() { clearInterval(timer); timer = null; rate = 0; $('#heat').classList.remove('beat'); }
+    let rate = 0;
+    function stop() { rate = 0; $('#heat').classList.remove('beat'); }
     function set(ms) {
       if (ms === rate) return;
       stop();
@@ -260,20 +99,11 @@
       rate = ms;
       $('#heat').style.setProperty('--beat', ms + 'ms');
       $('#heat').classList.add('beat');
-      if (prefs.sound) sfx.heartbeat();
-      timer = setInterval(() => { if (prefs.sound) sfx.heartbeat(); }, ms);
     }
     return { set, stop };
   })();
 
-  // ---------------- announcer, achievements, moments ----------------
-  const pick = (a) => a[Math.floor(Math.random() * a.length)];
-  function announce(text) {
-    const el = $('#callout');
-    el.textContent = text;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  }
-
+  // ---------------- achievements, moments ----------------
   const ACH = {
     seven: ['🔥', 'Seven Heaven', 'Hit a 7 Streak'],
     greedy: ['🤑', 'Greedy', 'Busted holding 6 numbers'],
@@ -285,9 +115,9 @@
     zero: ['🎯', 'Zero Hero', 'Won a round holding the 0'],
     comeback: ['🚀', 'Comeback Kid', 'Won after trailing by 50+'],
   };
-  // App-side extras saved with the game: stakes, achievements, round moments, biggest deficits.
+  // App-side extras saved with the game: achievements, round moments, biggest deficits.
   function X() {
-    if (!game.s.x) game.s.x = { stakes: '', ach: {}, moments: [], maxDef: [] };
+    if (!game.s.x) game.s.x = { ach: {}, moments: [], maxDef: [] };
     return game.s.x;
   }
   const badgeQ = [];
@@ -309,7 +139,6 @@
       const el = $('#badge');
       el.innerHTML = `<span class="be">${e}</span><div><small>${esc(name)} unlocked</small><b>${t}</b><span class="d">${d}</span></div>`;
       el.classList.add('show');
-      sfx.badge();
       await sleep(2400);
       el.classList.remove('show');
       await sleep(450);
@@ -319,37 +148,21 @@
   const moment = (w, html) => X().moments.push({ w, html });
   const rawPts = (p) => breakdown(Object.assign({}, p, { status: 'active' })).score;
 
-  // Commentary, badges and highlights for each event (runs alongside the animations).
+  // Badges and round highlights for each event (runs alongside the animations).
   function react(ev) {
     const s = ev.snap, P = s.players;
     const nm = (i) => `<b>${esc(P[i].name)}</b>`;
     switch (ev.type) {
       case 'roundStart':
         X().moments = [];
-        if (ev.round === 1 && X().stakes) setTimeout(() => toast(`🎯 Playing for: <b>${esc(X().stakes)}</b>`, 2800), 200);
-        break;
-      case 'turn': {
-        const n = numsOf(P[ev.p]), pts = breakdown(P[ev.p]).score;
-        if (n === 6) announce(pick(['Living dangerously…', 'One more for the streak? 👀', 'Nerves of steel?']));
-        else if (pts >= 50) announce(pick(["That's a lot to lose…", 'Bank it or push it?']));
-        else if (n === 5) announce(pick(['Things are heating up 🔥', 'Feeling lucky?']));
-        break;
-      }
-      case 'place':
-        if (ev.card.kind === 'x2') announce('Double trouble! ✌️');
-        else if (ev.card.kind === 'num' && ev.card.value === 0) announce('A zero… still counts toward 7!');
-        else if (ev.card.kind === 'mod' && ev.card.value >= 8) announce(`+${ev.card.value}! Sweet.`);
         break;
       case 'bust': {
-        const n = numsOf(P[ev.p]), pts = rawPts(P[ev.p]);
-        if (n === 6) { announce('SO close! 😩'); award(ev.p, 'greedy'); }
-        else if (pts >= 40) announce(`${pts} points… gone. 💀`);
-        else if (n <= 1) announce('Ouch. Early exit.');
+        const pts = rawPts(P[ev.p]);
+        if (numsOf(P[ev.p]) === 6) award(ev.p, 'greedy');
         moment(pts, `💥 ${nm(ev.p)} busted holding ${pts} points`);
         break;
       }
       case 'saved':
-        announce('Phew! 😅');
         award(ev.p, 'saved');
         moment(25 + breakdown(P[ev.p]).score, `😅 A Second Chance saved ${nm(ev.p)}`);
         break;
@@ -360,26 +173,20 @@
       case 'freeze': {
         const pts = breakdown(P[ev.t]).score;
         if (ev.t !== ev.p) {
-          if (pts >= 40) { announce('Ice cold. 🥶'); award(ev.p, 'ice'); }
-          else announce(pick(['Chill out ❄️', 'Frozen solid!']));
+          if (pts >= 40) award(ev.p, 'ice');
           moment(pts * 1.1, `🥶 ${nm(ev.p)} froze ${nm(ev.t)} at ${pts}`);
-        } else if (!ev.auto) announce('Playing it safe.');
+        }
         break;
       }
-      case 'flip3':
-        if (ev.t !== ev.p) announce(pick(['Good luck with that 😈', 'Flip, flip, flip!']));
-        break;
       case 'flip3Done':
         if (P[ev.p].status === 'active') award(ev.p, 'survivor');
         break;
-      case 'stay': {
-        if (ev.forced) break;
-        const n = numsOf(P[ev.p]), pts = breakdown(P[ev.p]).score;
-        if (n === 6) { award(ev.p, 'nerves'); moment(45, `😎 ${nm(ev.p)} walked away holding 6 numbers`); }
-        if (pts >= 50) announce('Big bank! 💰');
-        else if (pts < 10) announce('Cautious…');
+      case 'stay':
+        if (!ev.forced && numsOf(P[ev.p]) === 6) {
+          award(ev.p, 'nerves');
+          moment(45, `😎 ${nm(ev.p)} walked away holding 6 numbers`);
+        }
         break;
-      }
       case 'roundEnd': {
         const x = X(), rows = ev.summary.rows;
         const best = rows.slice().sort((a, b) => b.score - a.score)[0];
@@ -543,7 +350,6 @@
         focusP = (ev.dealer + 1) % s.players.length;
         render(s, focusP);
         banner(`Round ${ev.round}`, `${s.players[ev.dealer].name} deals`, '#1677c9');
-        sfx.shuffle();
         const deck = $('.deckstack');
         deck.classList.add('shuffling');
         setTimeout(() => deck.classList.remove('shuffling'), 950);
@@ -552,7 +358,6 @@
       }
       case 'reshuffle':
         toast('Deck ran out, so the discards were shuffled in');
-        sfx.shuffle();
         await sleep(800);
         break;
       case 'turn':
@@ -560,7 +365,6 @@
         focusP = ev.p;
         if (ev.p !== lastTurnP) {
           banner(s.players[ev.p].name, 'Your turn', pc(ev.p));
-          sfx.turn();
           await sleep(500);
         }
         lastTurnP = ev.p;
@@ -570,18 +374,16 @@
         dealing = ev.deal;
         render(s, ev.p);
         showReveal(ev.card);
-        sfx.flip();
         await sleep(ev.deal ? 560 : 680);
         break;
       case 'place':
         if (dealing) flyToChip(ev.card, ev.p); else hideReveal(true);
         render(s, ev.p, ev.card.id);
-        sfx.place(ev.card);
         if (ev.card.kind === 'second') toast(`${nm(ev.p)} is holding a Second Chance`);
         await sleep(ev.card.kind === 'num' ? 300 : 500);
         break;
       case 'bust':
-        shakeReveal(); sfx.bust(); flash('red'); shake();
+        shakeReveal(); flash('red'); shake();
         stamp('BUST!', 'bust', `Second ${ev.card.value}`);
         await sleep(550);
         hideReveal(true);
@@ -590,7 +392,7 @@
         break;
       case 'saved':
         stamp('SAVED!', 'saved', 'Second Chance used');
-        sfx.saved(); flash('gold');
+        flash('gold');
         await sleep(700);
         hideReveal(true);
         render(s, ev.p);
@@ -600,7 +402,7 @@
         hideReveal(true);
         render(s, ev.p, ev.card.id);
         stamp('7 STREAK!', 'seven', '+15 bonus');
-        flash('gold'); fx.burst(200); sfx.seven();
+        flash('gold'); fx.burst(200);
         await sleep(2100);
         break;
       case 'setAside':
@@ -619,7 +421,7 @@
         focusP = ev.t;
         render(s, ev.t);
         stamp('FROZEN', 'freeze');
-        flash('ice'); sfx.freeze();
+        flash('ice');
         const pts = breakdown(s.players[ev.t]).score;
         toast(ev.auto && ev.t === ev.p
           ? `${nm(ev.t)} is the only one left and has to take it. Frozen with ${pts}`
@@ -632,7 +434,6 @@
         focusP = ev.t;
         render(s, ev.t);
         stamp('FLIP 3!', 'flip3');
-        sfx.flip3();
         toast(ev.auto && ev.t === ev.p
           ? `${nm(ev.t)} is the only one left and must flip 3!`
           : ev.t === ev.p ? `${nm(ev.t)} takes the Flip Three!` : `${nm(ev.p)} makes ${nm(ev.t)} flip 3!`, 2200);
@@ -644,7 +445,6 @@
       case 'giveSecond':
         hideReveal(true);
         render(s, ev.t, ev.card.id);
-        sfx.saved();
         toast(`${nm(ev.p)} already had one, so ${nm(ev.t)} gets the Second Chance`, 2200);
         await sleep(1100);
         break;
@@ -655,7 +455,6 @@
         break;
       case 'stay':
         render(s, ev.p);
-        sfx.close();
         toast(ev.forced ? `Out of cards, so ${nm(ev.p)} closes` : `${nm(ev.p)} closes with <b>${breakdown(s.players[ev.p]).score}</b>`);
         await sleep(750);
         break;
@@ -718,7 +517,6 @@
     closeModal();
     game = Game.load(JSON.parse(snap));
     lastTurnP = game.s.awaiting.p;
-    sfx.click();
     toast('Close undone. Still your turn');
     settle();
   }
@@ -750,7 +548,6 @@
     openModal(`<div class="mhead">${cardHTML(a.card)}<div><h2>${title}</h2><p><b style="color:${pc(a.p)}">${esc(from.name)}</b> drew it. ${desc}</p></div></div>
       <div class="pick">${opts}</div>`, (m) => {
       m.querySelectorAll('.pick button').forEach((b) => b.addEventListener('click', () => {
-        sfx.click();
         clearUndo();
         closeModal();
         game.chooseTarget(+b.dataset.i);
@@ -793,12 +590,6 @@
     const top = (x.moments || []).slice().sort((a, b) => b.w - a.w)[0];
     const momentHTML = top ? `<div class="moment"><small>Moment of the round</small>${top.html}</div>` : '';
 
-    let stakesHTML = '';
-    if (over && x.stakes) {
-      const min = Math.min(...s.players.map((p) => p.total));
-      const losers = s.players.filter((p) => p.total === min).map((p) => esc(p.name)).join(' & ');
-      stakesHTML = `<div class="stakesbox">🎯 The stakes<b>${esc(x.stakes)}</b>That's on ${losers}!</div>`;
-    }
     let achHTML = '';
     if (over) {
       const rowsA = s.players.map((p, i) => ({ p, i, list: x.ach[i] || [] })).filter((r) => r.list.length);
@@ -807,7 +598,7 @@
     }
 
     const head = over
-      ? `<div class="winner"><div class="crown">👑</div><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>${stakesHTML}`
+      ? `<div class="winner"><div class="crown">👑</div><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
       : `<h2>Round ${sum.round} results</h2><p>First to ${s.target} wins. ${newLead}</p>`;
     const undoBtn = undo ? `<button class="btn ghost" id="mUndo">↩ Undo that close</button>` : '';
     const btns = over
@@ -818,13 +609,13 @@
       if (ub) ub.addEventListener('click', doUndo);
       requestAnimationFrame(() => m.querySelectorAll('.bar i').forEach((i) => { i.style.width = i.dataset.w + '%'; }));
       countUp(m.querySelectorAll('.st'));
-      if (over) { fx.burst(260, 0.3); sfx.win(); setTimeout(() => fx.burst(180, 0.35), 700); }
+      if (over) { fx.burst(260, 0.3); setTimeout(() => fx.burst(180, 0.35), 700); }
       const nx = m.querySelector('#mNext');
-      if (nx) nx.addEventListener('click', () => { sfx.click(); clearUndo(); closeModal(); game.nextRound(); pump(); });
+      if (nx) nx.addEventListener('click', () => { clearUndo(); closeModal(); game.nextRound(); pump(); });
       const rm = m.querySelector('#mRematch');
-      if (rm) rm.addEventListener('click', () => { sfx.click(); clearUndo(); closeModal(); startGame(s.players.map((p) => p.name), s.target, null, x.stakes); });
+      if (rm) rm.addEventListener('click', () => { clearUndo(); closeModal(); startGame(s.players.map((p) => p.name), s.target); });
       const nw = m.querySelector('#mNew');
-      if (nw) nw.addEventListener('click', () => { sfx.click(); clearUndo(); closeModal(); store.del(SAVE); game = null; showSetup(); });
+      if (nw) nw.addEventListener('click', () => { clearUndo(); closeModal(); store.del(SAVE); game = null; showSetup(); });
     });
   }
 
@@ -868,21 +659,12 @@
 
   function showMenu() {
     heart.stop();
-    const stakes = game && X().stakes ? `<p>🎯 Playing for: <b>${esc(X().stakes)}</b></p>` : '';
-    openModal(`<h2>Menu</h2>${stakes}<div class="menu-list">
+    openModal(`<h2>Menu</h2><div class="menu-list">
       <button class="btn ghost" id="mRules">📖  How to play</button>
-      <button class="btn ghost" id="mSound">${prefs.sound ? '🔊  Sound effects: on' : '🔇  Sound effects: off'}</button>
-      <button class="btn ghost" id="mMusic">${prefs.music ? '🎵  Music: on' : '🎵  Music: off'}</button>
       <button class="btn ghost" id="mHome">🏠  Main menu (game is saved)</button>
       <button class="btn ghost" id="mEnd" style="color:#ff8a95">✖  End this game</button>
       <button class="btn primary" id="mBack">Back to the table</button></div>`, (m) => {
       m.querySelector('#mRules').onclick = showRules;
-      m.querySelector('#mSound').onclick = () => { prefs.sound = !prefs.sound; store.set(PREFS, prefs); showMenu(); sfx.click(); };
-      m.querySelector('#mMusic').onclick = () => {
-        prefs.music = !prefs.music; store.set(PREFS, prefs);
-        if (prefs.music) music.start(); else music.stop();
-        showMenu(); sfx.click();
-      };
       m.querySelector('#mHome').onclick = () => { closeModal(); showSetup(); };
       m.querySelector('#mEnd').onclick = () => {
         openModal(`<h2>End this game?</h2><p>Scores will be lost.</p><div class="mbtns"><button class="btn pink" id="mYes">End game</button><button class="btn ghost" id="mNo">Keep playing</button></div>`, (mm) => {
@@ -901,11 +683,9 @@
 
   function showSetup() {
     showScreen('setup');
-    music.stop();
     heart.stop();
     clearUndo();
     setHeat(0, false);
-    $('#stakesIn').value = prefs.stakes || '';
     const saved = store.get(SAVE);
     $('#btnResume').classList.toggle('hidden', !(saved && saved.phase !== 'over' && saved.players));
     renderNames();
@@ -922,14 +702,13 @@
     document.querySelectorAll('#targetSeg button').forEach((b) => b.classList.toggle('on', +b.dataset.v === prefs.target));
   }
 
-  function startGame(names, target, deck, stakes) {
+  function startGame(names, target, deck) {
     store.del(SAVE);
     clearUndo();
     game = new Game(names, { target, dealer: names.length - 1, deck });
-    game.s.x = { stakes: (stakes != null ? stakes : prefs.stakes || '').trim(), ach: {}, moments: [], maxDef: [] };
+    game.s.x = { ach: {}, moments: [], maxDef: [] };
     showScreen('table');
     keepAwake();
-    music.start();
     game.startRound();
     pump();
   }
@@ -939,9 +718,7 @@
     try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) { /* not allowed */ }
   }
   document.addEventListener('visibilitychange', () => {
-    const c = sfx.raw();
     if (document.visibilityState === 'visible') {
-      if (c && c.state === 'suspended') c.resume();
       if (game) {
         keepAwake();
         const a = game.s.awaiting;
@@ -953,39 +730,33 @@
       }
     } else {
       heart.stop();
-      if (c && c.state === 'running') c.suspend();
     }
   });
 
   // ---------------- wiring ----------------
-  $('#pMinus').onclick = () => { if (prefs.count > 2) { prefs.count--; store.set(PREFS, prefs); renderNames(); sfx.click(); } };
-  $('#pPlus').onclick = () => { if (prefs.count < 10) { prefs.count++; store.set(PREFS, prefs); renderNames(); sfx.click(); } };
-  document.querySelectorAll('#targetSeg button').forEach((b) => b.addEventListener('click', () => { prefs.target = +b.dataset.v; store.set(PREFS, prefs); renderNames(); sfx.click(); }));
+  $('#pMinus').onclick = () => { if (prefs.count > 2) { prefs.count--; store.set(PREFS, prefs); renderNames(); } };
+  $('#pPlus').onclick = () => { if (prefs.count < 10) { prefs.count++; store.set(PREFS, prefs); renderNames(); } };
+  document.querySelectorAll('#targetSeg button').forEach((b) => b.addEventListener('click', () => { prefs.target = +b.dataset.v; store.set(PREFS, prefs); renderNames(); }));
   $('#btnStart').onclick = () => {
-    sfx.unlock();
     const names = Array.from({ length: prefs.count }, (_, i) => (prefs.names[i] || '').trim() || `Player ${i + 1}`);
     startGame(names, prefs.target);
   };
   $('#btnResume').onclick = () => {
-    sfx.unlock();
     const saved = store.get(SAVE);
     if (!saved) return;
     game = Game.load(saved);
     lastTurnP = null;
     showScreen('table');
     keepAwake();
-    music.start();
     settle();
   };
-  $('#stakesIn').addEventListener('input', (e) => { prefs.stakes = e.target.value; store.set(PREFS, prefs); });
   $('#btnRules').onclick = showRules;
-  $('#btnMenu').onclick = () => { sfx.click(); showMenu(); };
+  $('#btnMenu').onclick = () => { showMenu(); };
 
   const canAct = () => !busy && game && game.s.awaiting && game.s.awaiting.type === 'decide';
   function doFlip() {
     if (!canAct()) return;
     clearUndo();
-    sfx.unlock();
     game.hit();
     pump();
   }
@@ -996,10 +767,8 @@
   flipBtn.addEventListener('pointerdown', (e) => {
     if (!canAct() || hold) return;
     e.preventDefault();
-    sfx.unlock();
     try { flipBtn.setPointerCapture(e.pointerId); } catch (_) { /* older browsers */ }
     flipBtn.classList.add('charging');
-    sfx.chargeStart();
     hold = { t: setTimeout(() => flipBtn.classList.add('charged'), 700) };
   });
   function endHold(fire, e) {
@@ -1007,7 +776,6 @@
     clearTimeout(hold.t);
     hold = null;
     flipBtn.classList.remove('charging', 'charged');
-    sfx.chargeStop();
     if (!fire) return;
     const r = flipBtn.getBoundingClientRect();
     if (e && (e.clientX < r.left - 24 || e.clientX > r.right + 24 || e.clientY < r.top - 60 || e.clientY > r.bottom + 30)) {
@@ -1024,7 +792,6 @@
   $('#btnClose').onclick = () => {
     if (!canAct()) return;
     clearUndo();
-    sfx.unlock();
     const snap = JSON.stringify(game.s);
     game.stay();
     undo = { snap, timer: null, pending: true };
@@ -1035,7 +802,6 @@
   $('#rail').addEventListener('click', (e) => {
     const chip = e.target.closest('.chip');
     if (!chip || busy || !game) return;
-    sfx.click();
     render(game.s, +chip.dataset.i);
   });
 
