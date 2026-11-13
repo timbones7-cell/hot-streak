@@ -328,7 +328,7 @@
       if (i === focus) cls.push('focus');
       if (p.status !== 'active') cls.push('out', p.status);
       if (p.seven) cls.push('seven');
-      const live = s.phase === 'play' && p.status !== 'busted' && (p.cards.length || p.status !== 'active') ? `<span class="plus">+${b.score}</span>` : '';
+      const live = s.phase === 'play' && (p.status !== 'busted' || b.score > 0) && (p.cards.length || p.status !== 'active') ? `<span class="plus">+${b.score}</span>` : '';
       return `<button class="chip ${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">${i === s.dealer ? '<span class="dealer">Dealer</span>' : ''}
         <div class="nm">${esc(p.name)}</div><div class="tot">${p.total}</div>
         <div class="rd">${live}${statusTag(p)}${p.second && p.status === 'active' ? '<span class="tag-s sc">♥</span>' : ''}</div>
@@ -658,7 +658,7 @@
     const rowsHTML = rows.map((r) => {
       const p = s.players[r.i];
       let detail;
-      if (r.busted) detail = `Busted on a second ${p.bust ? p.bust.value : ''}`;
+      if (r.busted) detail = `Busted on a second ${p.bust ? p.bust.value : ''}${r.mods.length ? ` · kept ${r.mods.map((m) => `+${m}`).join(' ')}` : ''}`;
       else if (!r.nums.length && !r.mods.length) detail = 'No cards';
       else detail = `${r.nums.join(' + ') || '0'}${r.x2 ? ' ×2' : ''}${r.mods.map((m) => ` + ${m}`).join('')}${r.bonus ? ' + 15 streak' : ''}`;
       return `<div class="sumrow ${r.after === lead ? 'lead' : ''}" style="--pc:${pc(r.i)}">
@@ -730,7 +730,7 @@
       <li><b>FLIP</b>: take the next card. Hold the deck down and let go to flip. Slide your finger off before letting go to back out.</li>
       <li><b>CLOSE</b>: bank your round points. You're out for the rest of the round, and action cards can't touch you anymore.</li>
       <li><b>SKIP</b>: pass your turn once per round (see House rules).</li></ul>
-    <h3>Busting</h3><ul><li>Flip a number you already have and you <b>bust</b>: 0 points this round.</li></ul>
+    <h3>Busting</h3><ul><li>Flip a number you already have and you <b>bust</b>: you lose your number cards and ×2 for the round, but you keep your bonus cards (house rule, see below).</li></ul>
     <h3>7 Streak</h3><ul><li>Collect <b>7 different numbers</b>. The round ends right away for everyone and you get <b>+15</b>.</li></ul>
     <h3>The deck (94 cards)</h3>
     <div class="minis">${cardHTML({ kind: 'num', value: 0 })}${cardHTML({ kind: 'num', value: 7 })}${cardHTML({ kind: 'num', value: 12 })}${cardHTML({ kind: 'mod', value: 4 })}${cardHTML({ kind: 'x2' })}</div>
@@ -748,6 +748,7 @@
       <li>The game ends after the round in which someone reaches the target score (200 by default). Highest total wins; a tie keeps playing.</li></ul>
     <h3>House rules</h3><ul>
       <li><b>Skip</b>: once per round, pass your turn without flipping. You keep your cards and stay in the round, so action cards can still hit you. You can't skip if you're the only player left.</li>
+      <li><b>Bust keeps bonuses</b>: if you bust, you still score your +2, +4, +6, +8 and +10 cards (not the numbers or ×2). In the original game a bust scores 0.</li>
       <li><b>Close</b> is what the original game calls "stay." Tapped it by mistake? Hit <b>Undo</b> within 5 seconds.</li></ul>
   </div><div class="mbtns" style="margin-top:16px"><button class="btn primary" id="mOk">Got it</button></div>`;
 

@@ -53,6 +53,18 @@ test('duplicate number busts and scores 0', () => {
   eq(g.s.players.map(p => p.total), [0, 3]);
 });
 
+test('house rule: a bust keeps bonus cards but loses numbers and x2', () => {
+  const g = game(['A', 'B'], [N(5), N(3), M(4), N(7), X2(), N(9), M(8), N(2), N(5)]);
+  g.hit(); g.hit();   // A +4, B 7
+  g.hit(); g.hit();   // A x2, B 9
+  g.hit(); g.hit();   // A +8, B 2
+  g.hit();            // A draws 5 again -> bust
+  eq(st(g, 0), 'busted');
+  eq(breakdown(g.s.players[0]).score, 12);
+  g.stay();
+  eq(g.s.players.map(p => p.total), [12, 3 + 7 + 9 + 2]);
+});
+
 test('turns alternate and closed players are skipped', () => {
   const g = game(['A', 'B', 'C'], [N(1), N(2), N(3), N(4)]);
   g.stay();           // A closes

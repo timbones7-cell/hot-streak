@@ -36,7 +36,8 @@
     const numSum = nums.reduce((a, b) => a + b, 0);
     const modSum = mods.reduce((a, b) => a + b, 0);
     const bonus = p.seven ? SEVEN_BONUS : 0;
-    const score = p.status === 'busted' ? 0 : numSum * (x2 ? 2 : 1) + modSum + bonus;
+    // House rule: a bust loses the numbers (and ×2) but keeps the +2…+10 bonus cards.
+    const score = p.status === 'busted' ? modSum : numSum * (x2 ? 2 : 1) + modSum + bonus;
     return { nums, mods, x2, numSum, modSum, bonus, score, busted: p.status === 'busted' };
   }
 
