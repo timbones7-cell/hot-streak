@@ -285,7 +285,6 @@
   function render(s, focus, newId) {
     $('#roundLbl').textContent = `Round ${s.round}`;
     $('#targetLbl').textContent = `to ${s.target}`;
-    $('#deckCount').textContent = `${s.deck.length} left`;
     const turnP = s.awaiting && s.awaiting.type === 'decide' ? s.awaiting.p : null;
 
     // score rail
@@ -316,7 +315,6 @@
     const canAct = !busy && turnP != null;
     ctr.classList.toggle('locked', !canAct);
     $('#btnFlip').classList.toggle('nudge', canAct);
-    $('#closeSub').textContent = turnP != null ? `bank ${breakdown(s.players[turnP]).score}` : 'bank points';
     const used = turnP != null && s.players[turnP].skipUsed;
     const skipOk = canAct && game && game.canSkip(turnP);
     $('#btnSkip').classList.toggle('off', !skipOk);
