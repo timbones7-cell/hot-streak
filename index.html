@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Hot Streak</title>
+<meta name="theme-color" content="#1a1040">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hot Streak">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP -->
+  <section id="setup" class="screen active">
+    <div class="logo">
+      <div class="fan">
+        <div class="card num fan-a" style="--c:#2f80ed"><span class="corner tl">7</span><span class="big">7</span><span class="corner br">7</span></div>
+        <div class="card back fan-b"></div>
+        <div class="card num fan-c" style="--c:#e63946"><span class="corner tl">12</span><span class="big">12</span><span class="corner br">12</span></div>
+      </div>
+      <h1><span>HOT</span><span>STREAK</span></h1>
+      <p class="tag">Flip. Push your luck. Hit seven.</p>
+    </div>
+
+    <button id="btnResume" class="btn ghost hidden">Continue saved game</button>
+
+    <div class="panel">
+      <div class="row between">
+        <label>Players</label>
+        <div class="stepper">
+          <button id="pMinus" aria-label="Fewer players">−</button>
+          <span id="pCount">2</span>
+          <button id="pPlus" aria-label="More players">+</button>
+        </div>
+      </div>
+      <div id="names"></div>
+      <div class="row between">
+        <label>Play to</label>
+        <div class="seg" id="targetSeg">
+          <button data-v="100">100</button><button data-v="150">150</button><button data-v="200" class="on">200</button><button data-v="300">300</button>
+        </div>
+      </div>
+    </div>
+
+    <button id="btnStart" class="btn primary big">Deal 'em in</button>
+    <button id="btnRules" class="btn link">How to play</button>
+  </section>
+
+  <!-- TABLE -->
+  <section id="table" class="screen">
+    <header class="topbar">
+      <div class="tb-left"><span id="roundLbl">Round 1</span><span class="dot">·</span><span id="targetLbl">to 200</span></div>
+      <button id="btnMenu" class="iconbtn" aria-label="Menu">⋯</button>
+    </header>
+    <div class="tablebody">
+      <aside id="rail"></aside>
+      <main id="stage">
+        <div id="focusHead">
+          <div id="focusName"></div>
+          <div id="focusStatus"></div>
+        </div>
+        <div id="focusPts"><span id="ptsNum">0</span><span class="ptsLbl">this round</span></div>
+        <div id="meter"></div>
+        <div id="tableau"></div>
+        <div id="extras"></div>
+        <div id="reveal"></div>
+        <div id="stamp"></div>
+      </main>
+    </div>
+    <footer id="controls">
+      <button id="btnFlip" class="deckbtn" aria-label="Flip a card">
+        <div class="deckstack"><div class="card back s3"></div><div class="card back s2"></div><div class="card back s1"></div></div>
+        <div class="decktxt"><b>FLIP</b><small id="deckCount">94 left</small></div>
+      </button>
+      <button id="btnClose" class="closebtn"><b>CLOSE</b><small id="closeSub">bank 0</small></button>
+    </footer>
+  </section>
+
+  <div id="banner"></div>
+  <div id="toast"></div>
+  <div id="modalWrap" class="hidden"><div id="modal"></div></div>
+  <canvas id="fx"></canvas>
+</div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

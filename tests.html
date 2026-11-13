@@ -1,0 +1,217 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hot Streak Tests</title>
+<style>body{font:14px system-ui;background:#111;color:#eee;padding:16px}.ok{color:#4ade80}.bad{color:#f87171}</style>
+</head><body><h1>Engine tests</h1><div id="out"></div>
+<script src="engine.js"></script>
+<script>
+const { Game, buildDeck, breakdown } = HotStreak;
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+function test(name, fn) {
+  try { fn(); pass++; out.insertAdjacentHTML('beforeend', `<div class="ok">✓ ${name}</div>`); }
+  catch (e) { fail++; out.insertAdjacentHTML('beforeend', `<div class="bad">✗ ${name}: ${e.message}</div>`); console.error(name, e); }
+}
+function eq(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg || ''} expected ${JSON.stringify(b)} got ${JSON.stringify(a)}`); }
+let uid = 1000;
+const N = (v) => ({ id: uid++, kind: 'num', value: v });
+const M = (v) => ({ id: uid++, kind: 'mod', value: v });
+const X2 = () => ({ id: uid++, kind: 'x2' });
+const A = (k) => ({ id: uid++, kind: k });
+// cards listed in draw order; filler at bottom so reshuffles never trigger
+function game(names, cards, opts = {}) {
+  const filler = Array.from({ length: 5 }, () => N(12));
+  const g = new Game(names, Object.assign({ deck: filler.concat(cards.slice().reverse()), dealer: names.length - 1 }, opts));
+  g.startRound();
+  return g;
+}
+const st = (g, i) => g.s.players[i].status;
+
+test('deck has 94 cards with official makeup', () => {
+  const d = buildDeck();
+  eq(d.length, 94);
+  eq(d.filter(c => c.kind === 'num').length, 79);
+  for (let v = 1; v <= 12; v++) eq(d.filter(c => c.kind === 'num' && c.value === v).length, v, 'value ' + v);
+  eq(d.filter(c => c.kind === 'num' && c.value === 0).length, 1);
+  eq(d.filter(c => c.kind === 'mod').length, 5);
+  eq(d.filter(c => c.kind === 'x2').length, 1);
+  for (const k of ['freeze', 'flip3', 'second']) eq(d.filter(c => c.kind === k).length, 3, k);
+});
+
+test('deal gives one card each, first turn left of dealer', () => {
+  const g = game(['A', 'B', 'C'], [N(5), N(3), N(7)]);
+  eq(g.s.players.map(p => p.cards[0].value), [5, 3, 7]);
+  eq(g.s.awaiting, { type: 'decide', p: 0 });
+});
+
+test('duplicate number busts and scores 0', () => {
+  const g = game(['A', 'B'], [N(5), N(3), N(5)]);
+  g.hit();
+  eq(st(g, 0), 'busted');
+  eq(g.s.awaiting.p, 1);
+  g.stay();
+  eq(g.s.phase, 'summary');
+  eq(g.s.players.map(p => p.total), [0, 3]);
+});
+
+test('turns alternate and closed players are skipped', () => {
+  const g = game(['A', 'B', 'C'], [N(1), N(2), N(3), N(4)]);
+  g.stay();           // A closes
+  eq(g.s.awaiting.p, 1);
+  g.hit();            // B draws 4
+  eq(g.s.awaiting.p, 2);
+  g.stay();
+  eq(g.s.awaiting.p, 1); // A skipped
+});
+
+test('second chance cancels a bust', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('second'), N(5), N(6)]);
+  g.hit(); // A gets second chance
+  eq(!!g.s.players[0].second, true);
+  g.stay(); // B
+  g.hit(); // A draws 5 -> saved
+  eq(st(g, 0), 'active');
+  eq(g.s.players[0].second, null);
+  eq(g.s.players[0].cards.map(c => c.value), [5]);
+});
+
+test('scoring: x2 doubles numbers only, then modifiers', () => {
+  const g = game(['A', 'B'], [N(4), N(1), X2(), N(2), M(6)]);
+  g.hit(); g.stay();  // A x2, B closes on 1
+  g.hit(); g.hit();   // A 2, +6
+  g.stay();
+  eq(breakdown(g.s.players[0]).score, (4 + 2) * 2 + 6);
+  eq(g.s.players[0].total, 18);
+});
+
+test('7 unique numbers ends round immediately with +15', () => {
+  const g = game(['A', 'B'], [N(0), N(9), N(1), N(10), N(2), N(11), N(3), N(12), N(4), N(8), N(5), N(7), N(6)]);
+  for (let k = 0; k < 12; k++) g.hit();
+  eq(g.s.phase, 'summary');
+  eq(g.s.players[0].seven, true);
+  eq(g.s.players[0].total, 0 + 1 + 2 + 3 + 4 + 5 + 6 + 15);
+  eq(g.s.players[1].total, 9 + 10 + 11 + 12 + 8 + 7);
+});
+
+test('freeze asks drawer to choose among active players', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('freeze')]);
+  g.hit();
+  eq(g.s.awaiting.type, 'target');
+  eq(g.s.awaiting.options, [0, 1]);
+  g.chooseTarget(1);
+  eq(st(g, 1), 'frozen');
+  eq(g.s.awaiting.p, 0);
+});
+
+test('closed players cannot be targeted; last active player must take it', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('freeze')]);
+  g.stay();       // A closes
+  g.hit();        // B draws freeze, only B active -> auto self
+  eq(st(g, 1), 'frozen');
+  eq(g.s.phase, 'summary');
+  eq(g.s.players.map(p => p.total), [5, 3]);
+});
+
+test('flip three: target takes 3 cards, set-aside freeze resolves after', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('flip3'), N(1), A('freeze'), N(2)]);
+  g.hit();
+  g.chooseTarget(1);  // B must flip three: 1, freeze(set aside), 2
+  eq(g.s.players[1].cards.map(c => c.value), [3, 1, 2]);
+  eq(g.s.awaiting.type, 'target'); // B now chooses freeze target
+  eq(g.s.awaiting.p, 1);
+  g.chooseTarget(0);
+  eq(st(g, 0), 'frozen');
+  eq(g.s.awaiting, { type: 'decide', p: 1 });
+});
+
+test('flip three stops on bust and discards set-aside actions', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('flip3'), A('freeze'), N(3), N(9)]);
+  g.hit();
+  g.chooseTarget(1);
+  eq(st(g, 1), 'busted');
+  eq(g.s.deck[g.s.deck.length - 1].value, 9); // third card never drawn
+  eq(st(g, 0), 'active');
+  eq(g.s.awaiting, { type: 'decide', p: 0 });
+});
+
+test('second chance can save mid flip three', () => {
+  const g = game(['A', 'B'], [N(5), N(3), A('flip3'), A('second'), N(3), N(4)]);
+  g.hit();
+  g.chooseTarget(1);
+  eq(st(g, 1), 'active');
+  eq(g.s.players[1].cards.map(c => c.value), [3, 4]);
+});
+
+test('extra second chance goes to another player, or is discarded', () => {
+  const g = game(['A', 'B', 'C'], [N(5), N(3), N(2), A('second'), N(1), N(4), A('second')]);
+  g.hit(); g.hit(); g.hit(); // A gets SC; B 1; C 4
+  g.hit(); // A draws second SC -> choose B or C
+  eq(g.s.awaiting.type, 'target');
+  eq(g.s.awaiting.options, [1, 2]);
+  g.chooseTarget(2);
+  eq(!!g.s.players[2].second, true);
+
+  const h = game(['A', 'B'], [N(5), N(3), A('second'), A('second')]);
+  h.hit(); h.stay(); h.hit(); // B closed, A's extra SC has no taker
+  eq(h.s.discard.some(c => c.kind === 'second'), true);
+  eq(h.s.awaiting, { type: 'decide', p: 0 });
+});
+
+test('action dealt during the opening deal resolves immediately', () => {
+  const g = game(['A', 'B'], [A('freeze'), N(3)]);
+  eq(g.s.awaiting.type, 'target');
+  g.chooseTarget(0); // A freezes self with nothing
+  eq(st(g, 0), 'frozen');
+  eq(g.s.players[1].cards[0].value, 3);
+  eq(g.s.awaiting, { type: 'decide', p: 1 });
+});
+
+test('game ends at target with a unique leader; ties play on', () => {
+  const g = game(['A', 'B'], [N(12), N(1)], { target: 10 });
+  g.stay(); g.stay();
+  eq(g.s.phase, 'over');
+  eq(g.s.winner, 0);
+  const u = game(['A', 'B'], [N(6), N(6)], { target: 5 });
+  u.stay(); u.stay();
+  eq(u.s.phase, 'summary');
+});
+
+test('next round rotates dealer and keeps deck going', () => {
+  const g = game(['A', 'B'], [N(5), N(3), N(7), N(8)]);
+  g.stay(); g.stay();
+  const before = g.s.deck.length;
+  g.nextRound();
+  eq(g.s.dealer, 0);
+  eq(g.s.players[1].cards[0].value, 7); // B (left of new dealer) dealt first
+  eq(g.s.deck.length, before - 2);
+  eq(g.s.discard.length, 2);
+  eq(g.s.awaiting.p, 1);
+});
+
+test('save/load round trip mid flip three', () => {
+  const g = game(['A', 'B', 'C'], [N(5), N(3), N(2), A('flip3'), A('second'), N(3)]);
+  g.hit(); g.chooseTarget(1); // B: SC kept...
+  const h = HotStreak.Game.load(JSON.parse(JSON.stringify(g.s)));
+  eq(h.s.awaiting, g.s.awaiting);
+});
+
+test('random full games never crash', () => {
+  for (let n = 0; n < 300; n++) {
+    const names = Array.from({ length: 2 + (n % 7) }, (_, i) => 'P' + i);
+    const g = new Game(names, { target: 200 });
+    g.startRound();
+    let guard = 0;
+    while (g.s.phase !== 'over' && guard++ < 20000) {
+      const a = g.s.awaiting;
+      if (a.type === 'decide') (Math.random() < 0.7 ? g.hit() : g.stay());
+      else if (a.type === 'target') g.chooseTarget(a.options[Math.floor(Math.random() * a.options.length)]);
+      else if (a.type === 'summary') g.nextRound();
+      const total = g.s.deck.length + g.s.discard.length + g.s.players.reduce((t, p) => t + p.cards.length + (p.second ? 1 : 0) + (p.bust ? 1 : 0), 0) +
+        Object.values(g.s.setAside).reduce((t, a) => t + a.length, 0) + (g.s.awaiting && g.s.awaiting.card ? 1 : 0) + g.s.tasks.filter(t => t.t === 'target').length;
+      if (total !== 94) throw new Error('card count ' + total + ' in game ' + n);
+    }
+    if (g.s.phase !== 'over') throw new Error('game did not finish');
+  }
+});
+
+out.insertAdjacentHTML('afterbegin', `<h2 id="summary" class="${fail ? 'bad' : 'ok'}">${pass} passed, ${fail} failed</h2>`);
+</script></body></html>
