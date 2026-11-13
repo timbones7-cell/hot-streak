@@ -39,7 +39,7 @@
   function cardHTML(c, cls = '') {
     switch (c.kind) {
       case 'num':
-        return `<div class="card num ${cls}" style="--c:${NUM_COLORS[c.value]}"><span class="corner tl">${c.value}</span><span class="big">${c.value}</span><span class="corner br">${c.value}</span></div>`;
+        return `<div class="card num ${c.value === 6 || c.value === 9 ? 'u69 ' : ''}${cls}" style="--c:${NUM_COLORS[c.value]}"><span class="corner tl">${c.value}</span><span class="big">${c.value}</span><span class="corner br">${c.value}</span></div>`;
       case 'mod':
         return `<div class="card mod ${cls}"><span class="big">+${c.value}</span></div>`;
       case 'x2':
@@ -226,6 +226,8 @@
       const c = playerEl(i);
       if (c) c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 260 });
     };
+    // onfinish can be skipped if the page is backgrounded mid-animation; never leave the card behind.
+    setTimeout(() => el.remove(), 700);
   }
 
   function flash(kind) {
@@ -235,9 +237,12 @@
     setTimeout(() => t.classList.remove('flash' + kind), 650);
   }
   function shake() { const t = $('#table'); t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake'); setTimeout(() => t.classList.remove('shake'), 500); }
-  function stamp(text, kind, sub) {
+  function stamp(text, kind, sub, player) {
     const el = $('#stamp');
     el.className = ''; void el.offsetWidth;
+    const seat = player != null && $(`#seats .seat[data-i="${player}"]`);
+    if (seat) { const r = seat.getBoundingClientRect(); el.style.top = r.top + r.height / 2 + 'px'; }
+    else el.style.top = '';
     el.innerHTML = esc(text) + (sub ? `<small>${esc(sub)}</small>` : '');
     el.className = 'show ' + kind;
   }
@@ -285,17 +290,22 @@
     $('#roundLbl').textContent = `Round ${s.round}`;
     $('#targetLbl').textContent = `to ${s.target}`;
     const turnP = s.awaiting && s.awaiting.type === 'decide' ? s.awaiting.p : null;
+    // Whose turn to show: the player deciding now, or (during animations) the last player to get a turn.
+    const cur = turnP != null ? turnP : s.phase === 'play' ? lastTurnP : null;
+    const tp = $('#turnPill');
+    tp.classList.toggle('hidden', cur == null);
+    if (cur != null) { tp.textContent = `${s.players[cur].name}'s turn`; tp.style.setProperty('--pc', pc(cur)); }
 
     // score rail
     $('#rail').innerHTML = s.players.map((p, i) => {
       const b = breakdown(p);
       const cls = ['chip'];
-      if (i === turnP) cls.push('turn');
+      if (i === cur) cls.push('turn');
       if (i === focus) cls.push('focus');
       if (p.status !== 'active') cls.push('out', p.status);
       if (p.seven) cls.push('seven');
       const live = s.phase === 'play' && p.status !== 'busted' && (p.cards.length || p.status !== 'active') ? `<span class="plus">+${b.score}</span>` : '';
-      return `<button class="chip ${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">${i === s.dealer ? '<span class="dealer">D</span>' : ''}
+      return `<button class="chip ${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">${i === s.dealer ? '<span class="dealer">Dealer</span>' : ''}
         <div class="nm">${esc(p.name)}</div><div class="tot">${p.total}</div>
         <div class="rd">${live}${statusTag(p)}${p.second && p.status === 'active' ? '<span class="tag-s sc">♥</span>' : ''}</div>
         <div class="bar"><i style="width:${Math.min(100, (p.total / s.target) * 100)}%"></i></div></button>`;
@@ -304,7 +314,8 @@
     // 2-3 players: everyone's hand on one screen. More: score rail plus the focused hand.
     const railMode = s.players.length > SEAT_MAX;
     $('#table').classList.toggle('railmode', railMode);
-    renderSeats(s, focus, turnP, newId, railMode ? [focus] : null);
+    renderSeats(s, focus, cur, newId, railMode ? [focus] : null);
+    $('#seats').classList.toggle('hasturn', cur != null);
     const fp = s.players[focus];
     setHeat(numsOf(fp), fp.status === 'active' && s.phase === 'play');
 
@@ -366,12 +377,12 @@
       const tag = i === turnP ? '<span class="tag-s turn">YOUR TURN</span>' : statusTag(p);
       return `<div class="${cls.join(' ')}" data-i="${i}" style="--pc:${pc(i)}">
         <div class="seat-head">
-          <div class="seat-name"><span class="nm">${esc(p.name)}</span>${i === s.dealer ? '<span class="dealer">D</span>' : ''}${tag}</div>
+          <div class="seat-name"><span class="nm">${esc(p.name)}</span>${tag}${i === s.dealer ? '<span class="tag-s dealer">Dealer</span>' : ''}</div>
           <div class="seat-score"><span class="seat-rd">+${b.score} <small>this round</small></span><span class="seat-tot">${p.total}</span></div>
         </div>
         <div class="seat-body">
           <div class="seat-cards">${row}</div>
-          <div class="seat-extras">${extrasHTML}</div>
+          <div class="seat-extras">${extrasHTML || '<span class="xhint">Bonus &amp; action cards</span>'}</div>
         </div>
       </div>`;
     }).join('');
@@ -422,14 +433,15 @@
         break;
       case 'bust':
         shakeReveal(); flash('red'); shake();
-        stamp('BUST!', 'bust', `Second ${ev.card.value}`);
+        stamp('BUST!', 'bust', `Second ${ev.card.value}`, ev.p);
         await sleep(550);
         hideReveal(true);
         render(s, ev.p, ev.card.id);
         await sleep(1000);
         break;
       case 'saved':
-        stamp('SAVED!', 'saved', 'Second Chance used');
+        stamp('SAVED!', 'saved', 'Second Chance used', ev.p);
+        toast(`A Second Chance saved ${nm(ev.p)}`);
         flash('gold');
         await sleep(700);
         hideReveal(true);
@@ -439,7 +451,7 @@
       case 'seven':
         hideReveal(true);
         render(s, ev.p, ev.card.id);
-        stamp('7 STREAK!', 'seven', '+15 bonus');
+        stamp('7 STREAK!', 'seven', '+15 bonus', ev.p);
         flash('gold'); fx.burst(200);
         await sleep(2100);
         break;
@@ -458,7 +470,7 @@
         hideReveal(true);
         focusP = ev.t;
         render(s, ev.t);
-        stamp('FROZEN', 'freeze');
+        stamp('FROZEN', 'freeze', null, ev.t);
         flash('ice');
         const pts = breakdown(s.players[ev.t]).score;
         toast(ev.auto && ev.t === ev.p
@@ -471,7 +483,7 @@
         hideReveal(true);
         focusP = ev.t;
         render(s, ev.t);
-        stamp('FLIP 3!', 'flip3');
+        stamp('FLIP 3!', 'flip3', null, ev.t);
         toast(ev.auto && ev.t === ev.p
           ? `${nm(ev.t)} is the only one left and must flip 3!`
           : ev.t === ev.p ? `${nm(ev.t)} takes the Flip Three!` : `${nm(ev.p)} makes ${nm(ev.t)} flip 3!`, 2200);
@@ -637,11 +649,11 @@
     if (over) {
       const rowsA = s.players.map((p, i) => ({ p, i, list: x.ach[i] || [] })).filter((r) => r.list.length);
       if (rowsA.length) achHTML = `<h3 style="margin:4px 0 8px">Badges earned</h3><div class="achlist">${rowsA.map((r) =>
-        `<div class="achrow" style="--pc:${pc(r.i)}"><span class="an">${esc(r.p.name)}</span>${r.list.map((id) => `<span class="achchip">${ACH[id][0]} ${ACH[id][1]}</span>`).join('')}</div>`).join('')}</div>`;
+        `<div class="achrow" style="--pc:${pc(r.i)}"><span class="an">${esc(r.p.name)}</span><div class="achchips">${r.list.map((id) => `<span class="achchip">${ACH[id][0]} ${ACH[id][1]}</span>`).join('')}</div></div>`).join('')}</div>`;
     }
 
     const head = over
-      ? `<div class="winner"><small>Winner</small><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
+      ? `<div class="winner" style="--pc:${pc(s.winner)}"><small>Winner</small><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
       : `<h2>Round ${sum.round} results</h2><p>First to ${s.target} wins. ${newLead}</p>`;
     const undoBtn = undo ? `<button class="btn ghost" id="mUndo">Undo that close</button>` : '';
     const btns = over

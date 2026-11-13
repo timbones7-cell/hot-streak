@@ -188,15 +188,15 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
 
 /* ---------- controls: three equal buttons ---------- */
-#controls { display: flex; gap: 8px; padding: 10px 12px calc(var(--safe-b) + 12px); }
-#controls > button { position: relative; flex: 1 1 0; min-width: 0; height: 60px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
+#controls { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "skip close" "flip flip"; gap: 8px; padding: 10px 12px calc(var(--safe-b) + 12px); }
+#controls > button { position: relative; min-width: 0; height: 46px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;
   font-size: 17px; font-weight: 600; letter-spacing: .01em; transition: transform .1s, background .15s, opacity .2s, box-shadow .2s; }
 #controls > button:active { transform: scale(.97); }
 #controls > button b { font-weight: 600; }
-.deckbtn { background: var(--hot); color: #fff; box-shadow: 0 1px 2px rgba(219, 80, 33, .3), 0 6px 16px rgba(242, 98, 46, .22); touch-action: none; -webkit-touch-callout: none; }
-.closebtn { background: var(--good); color: #fff; box-shadow: 0 1px 2px rgba(21, 145, 79, .3), 0 6px 16px rgba(26, 168, 99, .2); }
-.skipbtn { background: var(--panel); color: var(--ink); border: 1px solid var(--line2); box-shadow: var(--shadow); }
-.skipbtn small { font-size: 10.5px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+.deckbtn { grid-area: flip; height: 68px !important; font-size: 22px !important; font-weight: 700 !important; letter-spacing: .02em !important; background: var(--hot); color: #fff; box-shadow: 0 1px 2px rgba(219, 80, 33, .3), 0 6px 16px rgba(242, 98, 46, .22); touch-action: none; -webkit-touch-callout: none; }
+.closebtn { grid-area: close; background: var(--good); color: #fff; box-shadow: 0 1px 2px rgba(21, 145, 79, .3), 0 6px 16px rgba(26, 168, 99, .2); }
+.skipbtn { grid-area: skip; flex-direction: row !important; gap: 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--line2); box-shadow: var(--shadow); }
+.skipbtn small { font-size: 11px; font-weight: 500; color: var(--muted); }
 .skipbtn.off { opacity: .4; pointer-events: none; box-shadow: none; }
 #controls.locked button { opacity: .4; pointer-events: none; box-shadow: none; }
 
@@ -215,7 +215,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #banner small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
 #banner b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: var(--pc, var(--ink)); }
 @keyframes banner { 0% { opacity: 0; transform: translateY(8px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
-#toast { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 92px); transform: translateX(-50%); z-index: 25; max-width: 88%; padding: 10px 16px; border-radius: var(--r-md); background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-weight: 500; font-size: 14px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+#toast { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 150px); transform: translateX(-50%); z-index: 25; max-width: 88%; padding: 10px 16px; border-radius: var(--r-md); background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-weight: 500; font-size: 14px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 #toast b { font-weight: 700; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
@@ -251,7 +251,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .sumrow .bar i { display: block; height: 100%; width: 0; background: var(--pc); transition: width 1s .2s; }
 .winner { text-align: center; padding: 8px 0 4px; }
 .winner small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.winner h2 { font-size: 30px !important; color: var(--ink); margin-top: 4px !important; }
+.winner h2 { font-size: 30px !important; color: var(--pc, var(--ink)); margin-top: 4px !important; }
 .mbtns { display: flex; flex-direction: column; gap: 10px; }
 .menu-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .menu-list .btn { text-align: left; }
@@ -271,7 +271,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .tablebody, #controls { max-width: 760px; margin-left: auto; margin-right: auto; width: 100%; }
 }
 @media (max-height: 700px) {
-  #controls > button { height: 54px; }
+  #controls > button { height: 42px; }
+  .deckbtn { height: 60px !important; }
 }
 
 /* ---------- heat (table warms as your hand fills) ---------- */
@@ -281,7 +282,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @keyframes heatbeat { 0%, 100% { filter: none; } 15% { filter: saturate(1.35); } 30% { filter: none; } }
 
 /* ---------- achievements, moments ---------- */
-#badge { position: fixed; left: 50%; top: calc(var(--safe-t) + 10px); z-index: 70; transform: translate(-50%, -150%); transition: transform .4s cubic-bezier(.2, .8, .3, 1); pointer-events: none;
+#badge { position: fixed; left: 50%; top: calc(var(--safe-t) + 54px); z-index: 70; transform: translate(-50%, -150%); transition: transform .4s cubic-bezier(.2, .8, .3, 1); pointer-events: none;
   display: flex; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; border-radius: var(--r-lg); background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-lg); width: max-content; max-width: 92vw; }
 #badge.show { transform: translate(-50%, 0); }
 #badge .be { font-size: 24px; width: 38px; height: 38px; border-radius: 10px; background: #fff7e0; display: grid; place-items: center; }
@@ -289,7 +290,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 #badge b { display: block; font-size: 15px; font-weight: 700; }
 #badge span.d { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
 .achlist { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; }
-.achrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; font-size: 14px; }
+.achrow { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+.achchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .achrow .an { color: var(--pc); min-width: 64px; }
 .achchip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); font-size: 12.5px; font-weight: 500; }
 .moment { margin: 8px 0 4px; padding: 11px 14px; border-radius: var(--r-md); background: var(--soft); font-weight: 500; font-size: 14.5px; }
@@ -298,7 +300,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .newlead { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: #fff1c4; color: #6b4b00; font-weight: 600; font-size: 12.5px; }
 
 /* ---------- undo ---------- */
-#undo { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 150px); transform: translateX(-50%); z-index: 26; overflow: hidden; padding: 10px 18px; border-radius: var(--r-md); background: var(--ink); color: #fff; font-weight: 600; font-size: 15px; box-shadow: var(--shadow-lg); animation: dropin .25s ease-out; }
+#undo { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 200px); transform: translateX(-50%); z-index: 26; overflow: hidden; padding: 10px 18px; border-radius: var(--r-md); background: var(--ink); color: #fff; font-weight: 600; font-size: 15px; box-shadow: var(--shadow-lg); animation: dropin .25s ease-out; }
 #undo i { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--gold); transform-origin: left; animation: undoBar 5s linear forwards; }
 @keyframes undoBar { to { transform: scaleX(0); } }
 
@@ -337,3 +339,26 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* Score chips share the rail's height (up to a point) so the column doesn't end in empty space. */
 #rail .chip { flex: 1 1 0; min-height: 66px; max-height: 128px; display: flex; flex-direction: column; justify-content: center; }
 #rail .chip .tot { font-size: 28px; }
+
+/* 6 and 9 are underlined so they read correctly upside down. */
+.card.num.u69 .big, .card.num.u69 .corner { text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .08em; }
+.seat-extras { align-items: center; }
+.xhint { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in srgb, var(--pc) 45%, #9fb0bf); }
+
+/* ---------- whose turn ---------- */
+.topbar { position: relative; }
+.topbar { gap: 8px; }
+.topbar .tb-left { margin-left: auto; }
+#turnPill { order: -1; min-width: 0; max-width: 55vw; padding: 6px 14px; border-radius: 999px;
+  background: var(--pc); color: #fff; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--pc) 40%, transparent); }
+.seat.turn { border: 2px solid var(--pc); background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 10%, #fff), #fff 60%);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc) 16%, transparent), var(--shadow); }
+#seats.hasturn .seat:not(.turn) { opacity: .6; filter: saturate(.7); }
+.seat { transition: opacity .25s, filter .25s, border-color .2s, background .2s, box-shadow .2s; }
+.tag-s.turn { background: var(--pc); color: #fff; }
+.chip.turn { border-color: var(--pc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 18%, transparent), var(--shadow); }
+
+/* Dealer marker spelled out. */
+.tag-s.dealer { background: var(--soft); color: var(--ink2); box-shadow: inset 0 0 0 1px var(--line2); }
+.chip .dealer { width: auto; height: auto; padding: 1px 6px; border-radius: 999px; background: var(--soft); color: var(--ink2); font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase; box-shadow: inset 0 0 0 1px var(--line2); }
