@@ -42,9 +42,9 @@
       case 'num':
         return `<div class="card num ${cls}" style="--c:${NUM_COLORS[c.value]}"><span class="corner tl">${c.value}</span><span class="big">${c.value}</span><span class="corner br">${c.value}</span></div>`;
       case 'mod':
-        return `<div class="card mod ${cls}"><span class="big">+${c.value}</span><span class="lbl">BONUS</span></div>`;
+        return `<div class="card mod ${cls}"><span class="big">+${c.value}</span></div>`;
       case 'x2':
-        return `<div class="card x2 ${cls}"><span class="big">×2</span><span class="lbl">DOUBLE</span></div>`;
+        return `<div class="card x2 ${cls}"><span class="big">×2</span></div>`;
       case 'freeze':
         return `<div class="card freeze ${cls}"><div class="ic">${ICONS.freeze}</div><span class="lbl">FREEZE</span></div>`;
       case 'flip3':
