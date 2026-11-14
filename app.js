@@ -12,6 +12,7 @@
   const SEAT_MAX = 3; // up to this many players, show everyone's cards at once
 
   const SAVE = 'hotstreak.save.v1';
+  const LAST = 'hotstreak.last.v1'; // summary of the most recent finished game, for the home-screen recap
   const PREFS = 'hotstreak.prefs.v1';
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
@@ -577,7 +578,11 @@
     heart.stop();
     $('#controls').classList.add('locked');
     try {
-      while (game.events.length) await play(game.events.shift());
+      while (game.events.length) {
+        const ev = game.events.shift();
+        // Off the table (went to the menu): skip the animation but still count badges/highlights.
+        if ($('#table').classList.contains('active')) await play(ev); else react(ev);
+      }
     } catch (e) { console.error(e); }
     busy = false;
     dealing = false;
@@ -589,7 +594,11 @@
     const a = s.awaiting;
     if (a && a.p != null) focusP = a.p;
     render(s, focusP);
+    if (s.phase === 'over' && !X().recorded) { X().recorded = true; recordLastGame(s); }
     store.set(SAVE, s);
+    // Left for the home screen while animations were finishing: keep the save, but don't pop
+    // in-game sheets over the menu. Continue picks up from here.
+    if (!$('#table').classList.contains('active')) { heart.stop(); return; }
     if (!a) return;
     if (a.type === 'decide') {
       const n = numsOf(s.players[a.p]);
@@ -804,6 +813,10 @@
     heart.stop();
     clearUndo();
     setHeat(0, false);
+    // Clear any in-game banner, label, message or flying card left over from the table.
+    ['#banner', '#stamp', '#toast'].forEach((q) => $(q).classList.remove('show'));
+    hideReveal(false);
+    document.querySelectorAll('.shard, .flycard').forEach((el) => el.remove());
     const saved = store.get(SAVE);
     const canResume = !!(saved && saved.phase !== 'over' && saved.players);
     const resume = $('#btnResume');
@@ -818,7 +831,41 @@
         <span class="rs-sub">Round ${saved.round} · ${lead} · to ${saved.target}</span><span class="rs-who">${who}</span></span>
         <span class="rs-go" aria-hidden="true">▶</span>`;
     }
+    renderRecap(canResume);
     renderNames();
+  }
+
+  // ---------------- last game recap ----------------
+  function recordLastGame(s) {
+    store.set(LAST, {
+      when: Date.now(), target: s.target, rounds: s.round, winner: s.winner,
+      players: s.players.map((p, i) => ({ name: p.name, total: p.total, i })),
+    });
+  }
+
+  const ago = (t) => {
+    const days = Math.floor((Date.now() - t) / 864e5);
+    return days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  };
+
+  // Trophy, winner line, and a score bar per player; Play again starts a rematch (only when no game is saved).
+  function renderRecap(hasSave) {
+    const box = $('#recap');
+    const last = store.get(LAST);
+    box.classList.toggle('hidden', !last);
+    if (!last) return;
+    const ranked = last.players.slice().sort((x, y) => y.total - x.total).slice(0, 3);
+    const top = Math.max(1, ranked[0].total);
+    const winner = last.players[last.winner] || ranked[0];
+    box.innerHTML = `<div class="rc-head"><span class="rc-trophy" aria-hidden="true">🏆</span>
+        <div class="rc-txt"><div class="rc-title"><b style="color:${pc(winner.i)}">${esc(winner.name)}</b> won last game!</div>
+        <div class="rc-sub">${last.rounds} round${last.rounds === 1 ? '' : 's'} · to ${last.target} · ${ago(last.when)}</div></div>
+        ${hasSave ? '' : '<button class="rc-again" id="btnPlayAgain">Play again</button>'}</div>
+      <div class="rc-rows">${ranked.map((p) => `<div class="rc-row" style="--pc:${pc(p.i)}"><span class="rc-name">${esc(p.name)}</span>
+        <span class="rc-bar"><i data-w="${Math.round((p.total / top) * 100)}"></i></span><span class="rc-pts">${p.total}</span></div>`).join('')}</div>`;
+    setTimeout(() => box.querySelectorAll('.rc-bar i').forEach((i) => { i.style.width = i.dataset.w + '%'; }), 60);
+    const again = box.querySelector('#btnPlayAgain');
+    if (again) again.onclick = () => startGame(last.players.map((p) => p.name), last.target);
   }
 
   function renderNames() {
@@ -835,11 +882,17 @@
   function startGame(names, target, deck) {
     store.del(SAVE);
     clearUndo();
+    // Remember who played (typed names only, not "Player 2" defaults) so the next setup is pre-filled.
+    prefs.names = names.map((n, i) => (n === `Player ${i + 1}` ? '' : n));
+    prefs.count = names.length;
+    prefs.target = target;
+    store.set(PREFS, prefs);
     game = new Game(names, { target, dealer: names.length - 1, deck });
     game.s.x = { ach: {}, moments: [], maxDef: [] };
     showScreen('table');
     keepAwake();
     game.startRound();
+    store.set(SAVE, game.s); // saved from the first moment, even if you leave during the deal
     pump();
   }
 

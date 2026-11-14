@@ -545,3 +545,28 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* ---------- one game at a time: with a saved game, setup only offers continue / end ---------- */
 #setup.has-save .panel, #setup.has-save #btnStart { display: none; }
 .end-saved { color: var(--bad); font-weight: 600; }
+
+/* ---------- last game recap on the home screen ---------- */
+.recap { background: var(--panel); border-radius: var(--r-lg); padding: 12px 14px 13px; box-shadow: var(--shadow); animation: spUp .5s cubic-bezier(.2, .8, .3, 1) .15s both; }
+.rc-head { display: flex; align-items: center; gap: 10px; }
+.rc-trophy { flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 21px;
+  background: linear-gradient(135deg, #fff3c4, #ffd56b); box-shadow: 0 4px 10px rgba(245, 179, 1, .3); animation: rcBob 3s ease-in-out infinite; }
+@keyframes rcBob { 50% { transform: translateY(-2px) rotate(-6deg); } }
+.rc-txt { flex: 1 1 auto; min-width: 0; }
+.rc-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-sub { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+.rc-again { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--hot); color: #fff; font-size: 14px; font-weight: 700;
+  box-shadow: 0 4px 12px rgba(242, 98, 46, .3); transition: transform .1s; }
+.rc-again:active { transform: scale(.95); }
+.rc-rows { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.rc-row { display: grid; grid-template-columns: minmax(0, 30%) 1fr auto; align-items: center; gap: 8px; font-size: 13px; }
+.rc-name { font-weight: 700; color: var(--pc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-bar { height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.rc-bar i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, var(--pc), color-mix(in srgb, var(--pc) 55%, #ffd23f)); transition: width 1s cubic-bezier(.2, .8, .3, 1) .35s; }
+.rc-pts { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 2.2em; text-align: right; }
+@media (max-height: 740px) {
+  .recap { padding: 9px 12px 10px; }
+  .rc-trophy { width: 32px; height: 32px; font-size: 18px; }
+  .rc-rows { margin-top: 7px; gap: 3px; }
+  .rc-bar { height: 6px; }
+}
