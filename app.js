@@ -808,6 +808,9 @@
     const canResume = !!(saved && saved.phase !== 'over' && saved.players);
     const resume = $('#btnResume');
     resume.classList.toggle('hidden', !canResume);
+    // One game at a time: while a game is saved, the only choices are continue or end it.
+    $('#setup').classList.toggle('has-save', canResume);
+    $('#btnEndSaved').classList.toggle('hidden', !canResume);
     if (canResume) {
       const who = saved.players.map((p, i) => `<b style="color:${pc(i)}">${esc(p.name)}</b>`).join(' · ');
       const lead = saved.players.map((p) => p.total).join(' – ');
@@ -878,6 +881,13 @@
     settle();
   };
   $('#btnRules').onclick = showRules;
+  $('#btnEndSaved').onclick = () => {
+    openModal(`<h2>End this game?</h2><p>The scores will be lost, and you can set up a new game.</p>
+      <div class="mbtns"><button class="btn pink" id="mYes">End game</button><button class="btn ghost" id="mNo">Keep it</button></div>`, (m) => {
+      m.querySelector('#mYes').onclick = () => { store.del(SAVE); game = null; closeModal(); showSetup(); };
+      m.querySelector('#mNo').onclick = closeModal;
+    });
+  };
   $('#btnMenu').onclick = () => { showMenu(); };
 
   const canAct = () => !busy && game && game.s.awaiting && game.s.awaiting.type === 'decide';
