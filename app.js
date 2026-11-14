@@ -721,9 +721,11 @@
     const head = over
       ? `<div class="winner" style="--pc:${pc(s.winner)}"><small>Winner</small><h2>${esc(s.players[s.winner].name)} wins!</h2><p>Final score ${s.players[s.winner].total} after ${sum.round} round${sum.round === 1 ? '' : 's'}</p></div>`
       : `<h2>Round ${sum.round} results</h2><p>First to ${s.target} wins. ${newLead}</p>`;
+    // Once the game is over it's final: no undoing the close that ended it.
+    if (over) clearUndo();
     const undoBtn = undo ? `<button class="btn ghost" id="mUndo">Undo that close</button>` : '';
     const btns = over
-      ? `<button class="btn primary big" id="mRematch">Rematch</button>${undoBtn}<button class="btn ghost" id="mNew">New players</button>`
+      ? `<button class="btn primary big" id="mRematch">Rematch</button><button class="btn ghost" id="mNew">New players</button>`
       : `<button class="btn primary big" id="mNext">Next round<small>${esc(nextDealer)} deals</small></button>${undoBtn}`;
     openModal(`${head}${momentHTML}<div class="sumrows">${rowsHTML}</div>${achHTML}<div class="mbtns">${btns}</div>`, (m) => {
       const ub = m.querySelector('#mUndo');
