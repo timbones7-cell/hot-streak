@@ -40,17 +40,19 @@
           </defs>
           <rect x="4" y="4" width="112" height="112" rx="30" fill="url(#mkBg)"/>
           <ellipse cx="38" cy="26" rx="34" ry="20" fill="#fff" opacity=".16"/>
-          <g class="mk-flame" transform="translate(0 -4)">
+          <g class="mk-flame" transform="translate(0 -6)">
             <path d="M62 10C71 24 86 32 84 52 83 64 74 70 64 70H56C46 70 37 63 38 51 39 40 47 35 49 26 54 33 56 36 56 42 60 34 63 24 62 10Z" fill="url(#mkFlame)"/>
             <path d="M61 32C66 40 73 45 71 55 70 61 66 64 61 64 55 64 51 60 52 54 53 48 56 46 57 41 59 45 60 47 60 51 62 46 63 39 61 32Z" fill="#fff"/>
           </g>
-          <g transform="rotate(-9 60 78)">
-            <rect x="32" y="40" width="56" height="74" rx="10" fill="#fff" stroke="rgba(15,42,68,.08)"/>
-            <rect x="36.5" y="44.5" width="47" height="65" rx="7" fill="none" stroke="#ffb08a" stroke-width="1.6"/>
-            <text x="60" y="95" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif" font-size="50" font-weight="800" fill="url(#mkSeven)">7</text>
+          <g transform="rotate(-8 60 66)">
+            <rect x="34" y="31" width="52" height="70" rx="10" fill="#fff" stroke="rgba(15,42,68,.08)"/>
+            <rect x="38.5" y="35.5" width="43" height="61" rx="7" fill="none" stroke="#ffb08a" stroke-width="1.6"/>
+            <text x="60" y="83" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif" font-size="48" font-weight="800" fill="url(#mkSeven)">7</text>
+            <!-- Shimmer stays inside the card: the moving band is clipped to the card's shape. -->
+            <clipPath id="mkCardClip"><rect x="34" y="31" width="52" height="70" rx="10"/></clipPath>
+            <g clip-path="url(#mkCardClip)"><rect class="mk-shine" x="34" y="31" width="52" height="70" fill="url(#mkShine)"/></g>
           </g>
-          <rect class="mk-shine" x="4" y="4" width="112" height="112" rx="30" fill="url(#mkShine)"/>
-          <defs><linearGradient id="mkShine" x1="0" y1="0" x2="1" y2="0"><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset=".65" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+          <defs><linearGradient id="mkShine" x1="0" y1="0" x2="1" y2="0"><stop offset=".3" stop-color="#ffd9c4" stop-opacity="0"/><stop offset=".5" stop-color="#ffd9c4" stop-opacity=".75"/><stop offset=".7" stop-color="#ffd9c4" stop-opacity="0"/></linearGradient></defs>
         </svg>
       </div>
       <h1>Hot <span>Streak</span></h1>
