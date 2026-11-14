@@ -9,7 +9,8 @@
   const NUM_COLORS = ['#7c8798', '#e63946', '#f77f00', '#e0a400', '#5fae3e', '#12a36b', '#0fa3b1', '#2f80ed', '#5b4fe0', '#9b51e0', '#d63ab8', '#e8456b', '#8d5b2f'];
   const P_COLORS = ['#f0602b', '#1b8fd6', '#e0367a', '#2fa84f', '#8b5cf6', '#d99a00', '#0f9e8e', '#c2410c', '#3b5bdb', '#d6409f'];
   const pc = (i) => P_COLORS[i % P_COLORS.length];
-  const SEAT_MAX = 3; // up to this many players, show everyone's cards at once
+  const MAX_PLAYERS = 4;
+  const SEAT_MAX = 4; // up to this many players, show everyone's cards at once (4 = 2x2 grid)
 
   const SAVE = 'hotstreak.save.v1';
   const LAST = 'hotstreak.last.v1'; // summary of the most recent finished game, for the home-screen recap
@@ -20,6 +21,7 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
   };
   const prefs = Object.assign({ names: [], count: 2, target: 200 }, store.get(PREFS) || {});
+  prefs.count = Math.min(prefs.count, MAX_PLAYERS);
 
   let game = null;
   let busy = false;
@@ -389,6 +391,7 @@
   // only: player indexes to show (rail mode shows just the focused hand), or null for everyone.
   function renderSeats(s, focus, turnP, newId, only) {
     // Each hand: name/score row, number slots, then a bonus/action row with room for all 7.
+    $('#seats').classList.toggle('four', s.players.length === 4);
     const html = s.players.map((p, i) => {
       if (only && !only.includes(i)) return '';
       const b = breakdown(p);
@@ -740,7 +743,7 @@
       if (rm) rm.addEventListener('click', () => { clearUndo(); closeModal(); startGame(s.players.map((p) => p.name), s.target); });
       const nw = m.querySelector('#mNew');
       if (nw) nw.addEventListener('click', () => { clearUndo(); closeModal(); store.del(SAVE); game = null; showSetup(); });
-    }, 'results');
+    }, s.players.length >= 4 ? 'results many' : 'results');
   }
 
   function countUp(els) {
@@ -874,6 +877,7 @@
   function renderNames() {
     $('#pCount').textContent = prefs.count;
     const wrap = $('#names');
+    wrap.classList.toggle('two-col', prefs.count > 2);
     wrap.innerHTML = Array.from({ length: prefs.count }, (_, i) =>
       `<div class="nameIn" style="color:${pc(i)}"><span class="sw"></span><input maxlength="14" autocomplete="off" autocapitalize="words" placeholder="Player ${i + 1}" value="${esc(prefs.names[i] || '')}" data-i="${i}"></div>`).join('');
     wrap.querySelectorAll('input').forEach((inp) => inp.addEventListener('input', () => {
@@ -921,7 +925,7 @@
 
   // ---------------- wiring ----------------
   $('#pMinus').onclick = () => { if (prefs.count > 2) { prefs.count--; store.set(PREFS, prefs); renderNames(); } };
-  $('#pPlus').onclick = () => { if (prefs.count < 10) { prefs.count++; store.set(PREFS, prefs); renderNames(); } };
+  $('#pPlus').onclick = () => { if (prefs.count < MAX_PLAYERS) { prefs.count++; store.set(PREFS, prefs); renderNames(); } };
   document.querySelectorAll('#targetSeg button').forEach((b) => b.addEventListener('click', () => { prefs.target = +b.dataset.v; store.set(PREFS, prefs); renderNames(); }));
   $('#btnStart').onclick = () => {
     const names = Array.from({ length: prefs.count }, (_, i) => (prefs.names[i] || '').trim() || `Player ${i + 1}`);
