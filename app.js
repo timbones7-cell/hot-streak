@@ -387,7 +387,7 @@
   // only: player indexes to show (rail mode shows just the focused hand), or null for everyone.
   function renderSeats(s, focus, turnP, newId, only) {
     // Each hand: name/score row, number slots, then a bonus/action row with room for all 7.
-    $('#seats').innerHTML = s.players.map((p, i) => {
+    const html = s.players.map((p, i) => {
       if (only && !only.includes(i)) return '';
       const b = breakdown(p);
       const nums = p.cards.filter((c) => c.kind === 'num');
@@ -413,6 +413,21 @@
         </div>
       </div>`;
     }).join('');
+    // Update hands in place when the same players are showing, so the turn highlight, dimming
+    // and colors animate between players instead of snapping.
+    const box = $('#seats');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const next = [...tmp.children];
+    const cur = [...box.children];
+    if (cur.length === next.length && cur.every((el, k) => el.dataset.i === next[k].dataset.i)) {
+      cur.forEach((el, k) => {
+        if (el.className !== next[k].className) el.className = next[k].className;
+        if (el.innerHTML !== next[k].innerHTML) el.innerHTML = next[k].innerHTML;
+      });
+    } else {
+      box.replaceChildren(...next);
+    }
     layoutSeats();
   }
 
@@ -495,9 +510,11 @@
         await sleep(250);
         break;
       case 'chooseTarget':
-        await sleep(350);
+        // Make it obvious who pulled the action card before the picker opens.
+        stamp(`${s.players[ev.p].name} drew ${ACTION_NAME[ev.card.kind]}`, ev.card.kind === 'second' ? 'saved' : ev.card.kind, null, ev.p);
+        await sleep(1100);
         hideReveal(true);
-        await sleep(200);
+        await sleep(250);
         break;
       case 'freeze': {
         hideReveal(true);
@@ -625,9 +642,9 @@
     const s = game.s;
     const from = s.players[a.p];
     const copy = {
-      freeze: ['Freeze!', 'Who gets frozen? They bank their points and sit out the rest of the round.'],
-      flip3: ['Flip Three!', 'Who has to flip the next 3 cards, one at a time?'],
-      second: ['Spare Second Chance', 'You can only hold one. Who gets this one?'],
+      freeze: ['Freeze!', 'pick who gets frozen. They bank their points and sit out the rest of the round.'],
+      flip3: ['Flip Three!', 'pick who has to flip the next 3 cards, one at a time.'],
+      second: ['Spare Second Chance', "you can only hold one, so pick who gets this one."],
     }[a.action];
     const opts = a.options.map((i, k) => {
       const p = s.players[i]; const b = breakdown(p);
@@ -637,8 +654,10 @@
         <div class="pm">${n}/7 numbers${p.second ? ' · has 2nd Chance' : ''} · total ${p.total}</div></div>
         <div class="pr">${b.score}<small>this round</small></div></button>`;
     }).join('');
-    openModal(`<div class="pk-hero"><div class="pk-card">${cardHTML(a.card)}</div>
-      <h2>${copy[0]}</h2><p><b style="color:${pc(a.p)}">${esc(from.name)}</b> drew it. ${copy[1]}</p></div>
+    openModal(`<div class="pk-hero">
+      <div class="pk-from" style="--pc:${pc(a.p)}"><span class="pk-dot"></span>${esc(from.name)} drew this card</div>
+      <div class="pk-card">${cardHTML(a.card)}</div>
+      <h2>${copy[0]}</h2><p><b style="color:${pc(a.p)}">${esc(from.name)}</b>, ${copy[1]}</p></div>
       <div class="pick">${opts}</div>`, (m) => {
       m.querySelectorAll('.pick button').forEach((b) => b.addEventListener('click', () => {
         clearUndo();
