@@ -314,6 +314,7 @@
   function render(s, focus, newId) {
     $('#roundLbl').textContent = `Round ${s.round}`;
     $('#targetLbl').textContent = `to ${s.target}`;
+    $('#deckCount').textContent = `${s.deck.length} card${s.deck.length === 1 ? '' : 's'} left`;
     const turnP = s.awaiting && s.awaiting.type === 'decide' ? s.awaiting.p : null;
     // Whose turn to show: the player deciding now, or (during animations) the last player to get a turn.
     const cur = turnP != null ? turnP : s.phase === 'play' ? lastTurnP : null;

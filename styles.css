@@ -570,3 +570,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .rc-rows { margin-top: 7px; gap: 3px; }
   .rc-bar { height: 6px; }
 }
+
+/* Cards left in the deck, small under Flip. */
+.deckbtn > span { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+#deckCount { font-size: 12px; font-weight: 500; letter-spacing: .02em; opacity: .85; margin-top: 2px; }
